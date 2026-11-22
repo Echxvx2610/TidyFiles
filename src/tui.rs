@@ -478,9 +478,9 @@ impl TuiApp {
     }
 
     fn render_categories_modal(&self, frame: &mut Frame, area: Rect) {
-        // Tamaño responsivo y dinámico basado en las dimensiones reales de la terminal
-        let popup_width = (area.width * 85 / 100).clamp(65, 115).min(area.width);
-        let popup_height = (area.height * 85 / 100).clamp(18, 32).min(area.height);
+        // Modal compacto, centrado y bien proporcionado
+        let popup_width = (area.width * 75 / 100).clamp(55, 95).min(area.width);
+        let popup_height = (area.height * 70 / 100).clamp(16, 22).min(area.height);
 
         let popup_x = (area.width.saturating_sub(popup_width)) / 2;
         let popup_y = (area.height.saturating_sub(popup_height)) / 2;
@@ -498,13 +498,13 @@ impl TuiApp {
         let inner_area = outer_block.inner(popup_rect);
         frame.render_widget(outer_block, popup_rect);
 
-        // División interna: Subtítulo (2 líneas), Lista scrolleable (Min 8), Footer fijo con feedback (4 líneas)
+        // División interna: Subtítulo (2 líneas), Lista compacta (Min 6), Footer fijo (3 líneas)
         let modal_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Length(2),
                 Constraint::Min(6),
-                Constraint::Length(4),
+                Constraint::Length(3),
             ])
             .split(inner_area);
 
@@ -523,28 +523,21 @@ impl TuiApp {
         ]));
         frame.render_widget(header_p, modal_chunks[0]);
 
-        // Lista de categorías con ajuste de línea automático (Wrap)
+        // Lista compacta: nombre de categoría y extensiones en la misma fila con alineación prolija
         let mut lines = Vec::new();
         for (name, cat) in &self.config.categories {
+            let label = format!("{} {:<13}: ", cat.icon, name);
+            let exts = cat.extensions.join(", ");
+
             lines.push(Line::from(vec![
                 Span::styled(
-                    format!("{} {:<16}", cat.icon, name),
+                    label,
                     Style::default()
                         .fg(Color::Yellow)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::styled(
-                    format!("({} extensiones)", cat.extensions.len()),
-                    Style::default().fg(Color::DarkGray),
-                ),
-            ]));
-
-            let exts = cat.extensions.join(", ");
-            lines.push(Line::from(vec![
-                Span::raw("   "),
                 Span::styled(exts, Style::default().fg(Color::White)),
             ]));
-            lines.push(Line::from(""));
         }
 
         let cat_paragraph = Paragraph::new(lines)
@@ -552,7 +545,7 @@ impl TuiApp {
             .scroll((self.categories_scroll as u16, 0));
         frame.render_widget(cat_paragraph, modal_chunks[1]);
 
-        // Caja de feedback y ayuda fija en la base del modal (nunca se corta)
+        // Caja de feedback y ayuda en la parte inferior
         let footer_block = Block::default()
             .borders(Borders::TOP)
             .border_style(Style::default().fg(Color::DarkGray));
@@ -560,21 +553,21 @@ impl TuiApp {
         let footer_lines = vec![
             Line::from(vec![
                 Span::styled(
-                    "💡 Personalizar o añadir reglas: ",
+                    "💡 Reglas personalizadas: ",
                     Style::default()
                         .fg(Color::Green)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
-                    "crea 'orderfiles.toml' en tu carpeta o corre 'orderfiles --init-config'.",
+                    "crea 'orderfiles.toml' en tu carpeta o usa 'orderfiles --init-config'.",
                     Style::default().fg(Color::White),
                 ),
             ]),
             Line::from(vec![
-                Span::styled("   Navegar: ", Style::default().fg(Color::Cyan)),
-                Span::raw("[↑/↓/j/k/PgUp/PgDn] scroll │ "),
-                Span::styled("Cerrar: ", Style::default().fg(Color::Red)),
-                Span::raw("[Esc], [q] o [c]"),
+                Span::styled("[Esc] / [q] / [c] ", Style::default().fg(Color::Red)),
+                Span::raw("Cerrar │ "),
+                Span::styled("[↑/↓] ", Style::default().fg(Color::Cyan)),
+                Span::raw("Desplazar"),
             ]),
         ];
 
