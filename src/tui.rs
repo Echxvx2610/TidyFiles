@@ -7,7 +7,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph},
+    widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap},
 };
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -26,6 +26,7 @@ pub struct TuiApp {
     items: Vec<PlanItem>,
     selected_indices: HashSet<usize>,
     cursor: usize,
+    categories_scroll: usize,
     status_message: String,
     active_view: ActiveView,
     should_quit: bool,
@@ -63,6 +64,7 @@ impl TuiApp {
             items: plan.items,
             selected_indices,
             cursor: 0,
+            categories_scroll: 0,
             status_message,
             active_view: ActiveView::FilesList,
             should_quit: false,
@@ -98,6 +100,20 @@ impl TuiApp {
             ActiveView::CategoriesHelp => match code {
                 KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('c') | KeyCode::Enter => {
                     self.active_view = ActiveView::FilesList;
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    if self.categories_scroll > 0 {
+                        self.categories_scroll -= 1;
+                    }
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    self.categories_scroll += 1;
+                }
+                KeyCode::PageUp => {
+                    self.categories_scroll = self.categories_scroll.saturating_sub(5);
+                }
+                KeyCode::PageDown => {
+                    self.categories_scroll += 5;
                 }
                 _ => {}
             },
@@ -140,6 +156,7 @@ impl TuiApp {
                     self.execute_undo()?;
                 }
                 KeyCode::Char('c') => {
+                    self.categories_scroll = 0;
                     self.active_view = ActiveView::CategoriesHelp;
                 }
                 KeyCode::Char('r') => {
@@ -461,60 +478,107 @@ impl TuiApp {
     }
 
     fn render_categories_modal(&self, frame: &mut Frame, area: Rect) {
-        let popup_width = 70;
-        let popup_height = 20;
+        // Tamaño responsivo y dinámico basado en las dimensiones reales de la terminal
+        let popup_width = (area.width * 85 / 100).clamp(65, 115).min(area.width);
+        let popup_height = (area.height * 85 / 100).clamp(18, 32).min(area.height);
 
         let popup_x = (area.width.saturating_sub(popup_width)) / 2;
         let popup_y = (area.height.saturating_sub(popup_height)) / 2;
 
-        let popup_rect = Rect::new(
-            popup_x,
-            popup_y,
-            popup_width.min(area.width),
-            popup_height.min(area.height),
-        );
+        let popup_rect = Rect::new(popup_x, popup_y, popup_width, popup_height);
 
         frame.render_widget(Clear, popup_rect);
 
-        let mut lines = Vec::new();
-        lines.push(Line::from(Span::styled(
-            "Reglas y extensiones de archivos configuradas:",
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        )));
-        lines.push(Line::from(""));
-
-        for (name, cat) in &self.config.categories {
-            let exts = cat.extensions.join(", ");
-            lines.push(Line::from(vec![
-                Span::styled(
-                    format!("{} {:<14}: ", cat.icon, name),
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(exts, Style::default().fg(Color::White)),
-            ]));
-        }
-
-        lines.push(Line::from(""));
-        lines.push(Line::from(Span::styled(
-            "💡 Para añadir nuevas reglas, crea un archivo 'orderfiles.toml' en tu carpeta.",
-            Style::default().fg(Color::Green),
-        )));
-        lines.push(Line::from(Span::styled(
-            "Presiona [Esc] o [q] para cerrar esta ventana.",
-            Style::default().fg(Color::DarkGray),
-        )));
-
-        let block = Block::default()
+        let outer_block = Block::default()
             .title(" ⚙️ Formatos y Categorías Configuradas ")
             .borders(Borders::ALL)
             .border_type(BorderType::Double)
             .border_style(Style::default().fg(Color::Magenta));
 
-        let paragraph = Paragraph::new(lines).block(block);
-        frame.render_widget(paragraph, popup_rect);
+        let inner_area = outer_block.inner(popup_rect);
+        frame.render_widget(outer_block, popup_rect);
+
+        // División interna: Subtítulo (2 líneas), Lista scrolleable (Min 8), Footer fijo con feedback (4 líneas)
+        let modal_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(2),
+                Constraint::Min(6),
+                Constraint::Length(4),
+            ])
+            .split(inner_area);
+
+        // Subtítulo
+        let header_p = Paragraph::new(Line::from(vec![
+            Span::styled(
+                "Reglas activas para clasificar archivos ",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(
+                format!("({} categorías)", self.config.categories.len()),
+                Style::default().fg(Color::DarkGray),
+            ),
+        ]));
+        frame.render_widget(header_p, modal_chunks[0]);
+
+        // Lista de categorías con ajuste de línea automático (Wrap)
+        let mut lines = Vec::new();
+        for (name, cat) in &self.config.categories {
+            lines.push(Line::from(vec![
+                Span::styled(
+                    format!("{} {:<16}", cat.icon, name),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!("({} extensiones)", cat.extensions.len()),
+                    Style::default().fg(Color::DarkGray),
+                ),
+            ]));
+
+            let exts = cat.extensions.join(", ");
+            lines.push(Line::from(vec![
+                Span::raw("   "),
+                Span::styled(exts, Style::default().fg(Color::White)),
+            ]));
+            lines.push(Line::from(""));
+        }
+
+        let cat_paragraph = Paragraph::new(lines)
+            .wrap(Wrap { trim: true })
+            .scroll((self.categories_scroll as u16, 0));
+        frame.render_widget(cat_paragraph, modal_chunks[1]);
+
+        // Caja de feedback y ayuda fija en la base del modal (nunca se corta)
+        let footer_block = Block::default()
+            .borders(Borders::TOP)
+            .border_style(Style::default().fg(Color::DarkGray));
+
+        let footer_lines = vec![
+            Line::from(vec![
+                Span::styled(
+                    "💡 Personalizar o añadir reglas: ",
+                    Style::default()
+                        .fg(Color::Green)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    "crea 'orderfiles.toml' en tu carpeta o corre 'orderfiles --init-config'.",
+                    Style::default().fg(Color::White),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("   Navegar: ", Style::default().fg(Color::Cyan)),
+                Span::raw("[↑/↓/j/k/PgUp/PgDn] scroll │ "),
+                Span::styled("Cerrar: ", Style::default().fg(Color::Red)),
+                Span::raw("[Esc], [q] o [c]"),
+            ]),
+        ];
+
+        let footer_p = Paragraph::new(footer_lines).block(footer_block);
+        frame.render_widget(footer_p, modal_chunks[2]);
     }
 }
