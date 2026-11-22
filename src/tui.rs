@@ -478,9 +478,9 @@ impl TuiApp {
     }
 
     fn render_categories_modal(&self, frame: &mut Frame, area: Rect) {
-        // Modal compacto, centrado y bien proporcionado
-        let popup_width = (area.width * 75 / 100).clamp(55, 95).min(area.width);
-        let popup_height = (area.height * 70 / 100).clamp(16, 22).min(area.height);
+        // Modal amplio, centrado y proporcionado
+        let popup_width = (area.width * 85 / 100).clamp(70, 115).min(area.width);
+        let popup_height = (area.height * 80 / 100).clamp(18, 28).min(area.height);
 
         let popup_x = (area.width.saturating_sub(popup_width)) / 2;
         let popup_y = (area.height.saturating_sub(popup_height)) / 2;
@@ -498,54 +498,93 @@ impl TuiApp {
         let inner_area = outer_block.inner(popup_rect);
         frame.render_widget(outer_block, popup_rect);
 
-        // División interna: Subtítulo (2 líneas), Lista compacta (Min 6), Footer fijo (3 líneas)
+        // División vertical interna: Cabecera columnas (2 líneas), Lista de dos columnas (Min 6), Footer (4 líneas)
         let modal_chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
                 Constraint::Length(2),
                 Constraint::Min(6),
-                Constraint::Length(3),
+                Constraint::Length(4),
             ])
             .split(inner_area);
 
-        // Subtítulo
-        let header_p = Paragraph::new(Line::from(vec![
+        // Cabecera clara de columnas
+        let header_p = Paragraph::new(vec![Line::from(vec![
             Span::styled(
-                "Reglas activas para clasificar archivos ",
+                " Categoría        ",
                 Style::default()
                     .fg(Color::Cyan)
-                    .add_modifier(Modifier::BOLD),
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
+            ),
+            Span::styled("│ ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                "Formatos y Extensiones Soportadas",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
             ),
             Span::styled(
-                format!("({} categorías)", self.config.categories.len()),
+                format!(" ({} tipos)", self.config.categories.len()),
                 Style::default().fg(Color::DarkGray),
             ),
-        ]));
+        ])]);
         frame.render_widget(header_p, modal_chunks[0]);
 
-        // Lista compacta: nombre de categoría y extensiones en la misma fila con alineación prolija
+        // Cálculo exacto del ancho de la columna derecha para envolver sin desbordar
+        // Columna izquierda: 18 caracteres. Separador "│ ": 2 caracteres.
+        let right_col_width = (inner_area.width.saturating_sub(21) as usize).max(20);
+
         let mut lines = Vec::new();
         for (name, cat) in &self.config.categories {
-            let label = format!("{} {:<13}: ", cat.icon, name);
-            let exts = cat.extensions.join(", ");
+            // Dividir las extensiones en líneas que quepan en right_col_width
+            let mut ext_lines: Vec<String> = Vec::new();
+            let mut current_line = String::new();
 
-            lines.push(Line::from(vec![
-                Span::styled(
-                    label,
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(exts, Style::default().fg(Color::White)),
-            ]));
+            for (i, ext) in cat.extensions.iter().enumerate() {
+                let token = if i == 0 {
+                    ext.clone()
+                } else {
+                    format!(", {}", ext)
+                };
+
+                if !current_line.is_empty() && current_line.len() + token.len() > right_col_width {
+                    ext_lines.push(current_line);
+                    current_line = ext.clone();
+                } else {
+                    current_line.push_str(&token);
+                }
+            }
+            if !current_line.is_empty() {
+                ext_lines.push(current_line);
+            }
+
+            // Renderizar cada línea: la primera con el nombre; las siguientes con sangría en la columna derecha
+            for (line_idx, ext_line) in ext_lines.into_iter().enumerate() {
+                if line_idx == 0 {
+                    lines.push(Line::from(vec![
+                        Span::styled(
+                            format!(" {} {:<14}", cat.icon, name),
+                            Style::default()
+                                .fg(Color::Yellow)
+                                .add_modifier(Modifier::BOLD),
+                        ),
+                        Span::styled("│ ", Style::default().fg(Color::DarkGray)),
+                        Span::styled(ext_line, Style::default().fg(Color::White)),
+                    ]));
+                } else {
+                    lines.push(Line::from(vec![
+                        Span::raw("                  "), // 18 espacios exactos: nunca invade la columna de nombre
+                        Span::styled("│ ", Style::default().fg(Color::DarkGray)),
+                        Span::styled(ext_line, Style::default().fg(Color::White)),
+                    ]));
+                }
+            }
         }
 
-        let cat_paragraph = Paragraph::new(lines)
-            .wrap(Wrap { trim: true })
-            .scroll((self.categories_scroll as u16, 0));
+        let cat_paragraph = Paragraph::new(lines).scroll((self.categories_scroll as u16, 0));
         frame.render_widget(cat_paragraph, modal_chunks[1]);
 
-        // Caja de feedback y ayuda en la parte inferior
+        // Caja de feedback y ayuda protegida contra desbordamientos con Wrap
         let footer_block = Block::default()
             .borders(Borders::TOP)
             .border_style(Style::default().fg(Color::DarkGray));
@@ -553,25 +592,39 @@ impl TuiApp {
         let footer_lines = vec![
             Line::from(vec![
                 Span::styled(
-                    "💡 Reglas personalizadas: ",
+                    "💡 Reglas: ",
                     Style::default()
                         .fg(Color::Green)
                         .add_modifier(Modifier::BOLD),
                 ),
+                Span::raw("crea "),
                 Span::styled(
-                    "crea 'orderfiles.toml' en tu carpeta o usa 'orderfiles --init-config'.",
-                    Style::default().fg(Color::White),
+                    "'orderfiles.toml'",
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
+                Span::raw(" o usa "),
+                Span::styled(
+                    "'orderfiles --init-config'",
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(" para personalizar."),
             ]),
             Line::from(vec![
+                Span::styled("   Atajos: ", Style::default().fg(Color::DarkGray)),
                 Span::styled("[Esc] / [q] / [c] ", Style::default().fg(Color::Red)),
-                Span::raw("Cerrar │ "),
-                Span::styled("[↑/↓] ", Style::default().fg(Color::Cyan)),
+                Span::raw("Cerrar  │  "),
+                Span::styled("[↑/↓/j/k] ", Style::default().fg(Color::Cyan)),
                 Span::raw("Desplazar"),
             ]),
         ];
 
-        let footer_p = Paragraph::new(footer_lines).block(footer_block);
+        let footer_p = Paragraph::new(footer_lines)
+            .block(footer_block)
+            .wrap(Wrap { trim: true });
         frame.render_widget(footer_p, modal_chunks[2]);
     }
 }
