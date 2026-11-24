@@ -116,7 +116,7 @@ impl Default for Config {
                 extensions: vec![
                     "rs", "py", "js", "ts", "tsx", "jsx", "c", "cpp", "h", "hpp", "cs", "java",
                     "go", "rb", "php", "sh", "bash", "zsh", "html", "css", "scss", "sql", "json",
-                    "toml", "yaml", "yml", "xml",
+                    "toml", "yaml", "yml", "xml", "ipynb",
                 ]
                 .into_iter()
                 .map(String::from)
@@ -153,7 +153,19 @@ impl Config {
             }
         }
 
-        // 2. Probar en ~/.config/orderfiles/config.toml
+        // 2. Probar en el directorio de trabajo actual (donde se ejecuta el comando): ./orderfiles.toml
+        if let Ok(cwd) = std::env::current_dir() {
+            let cwd_path = cwd.join("orderfiles.toml");
+            if cwd_path.exists() {
+                if let Ok(content) = fs::read_to_string(&cwd_path) {
+                    if let Ok(config) = toml::from_str::<Config>(&content) {
+                        return config;
+                    }
+                }
+            }
+        }
+
+        // 3. Probar en ~/.config/orderfiles/config.toml
         if let Some(home) = std::env::var_os("HOME") {
             let global_path = PathBuf::from(home)
                 .join(".config")
