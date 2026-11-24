@@ -94,8 +94,11 @@ impl Organizer {
             let file_name_os = entry.file_name();
             let file_name = file_name_os.to_string_lossy();
 
-            // Ignorar el archivo de historial de orderfiles
-            if file_name == HISTORY_FILE_NAME {
+            // Ignorar el archivo de historial y archivos de configuracion propios de orderfiles
+            if file_name == HISTORY_FILE_NAME
+                || file_name == "orderfiles.toml"
+                || file_name == ".orderfiles.toml"
+            {
                 continue;
             }
 
