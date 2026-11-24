@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use colored::*;
 use orderfiles::cli::Cli;
@@ -95,38 +95,75 @@ fn handle_undo(target_dir: &Path, organizer: &Organizer) -> Result<()> {
     Ok(())
 }
 
-fn handle_init_config(target_dir: &Path) -> Result<()> {
-    let config_path = target_dir.join("orderfiles.toml");
-    if config_path.exists() {
+fn handle_init_config() -> Result<()> {
+    let global_path = Config::global_config_path()
+        .context("No se pudo determinar el directorio HOME del usuario")?;
+
+    if global_path.exists() {
         println!(
-            "{} Ya existe un archivo de configuración en {}",
-            "⚠️".yellow(),
-            config_path.display()
+            "{} Ya tienes tu archivo de configuración global en:",
+            "ℹ️".cyan().bold()
         );
+        println!("   {}", global_path.display().to_string().yellow().bold());
+        println!(
+            "\n{} Puedes editarlo directamente con tu editor preferido (nano, code, nvim, etc.):",
+            "💡".yellow()
+        );
+        println!("   code {}", global_path.display());
         return Ok(());
     }
 
     let default_config = Config::default();
-    default_config.save_to_file(&config_path)?;
+    default_config.save_to_file(&global_path)?;
 
     println!(
-        "{} Se ha generado la configuración inicial en: {}",
-        "✅".green().bold(),
-        config_path.display().to_string().cyan()
+        "{} Configuración global generada exitosamente en:",
+        "✅".green().bold()
     );
+    println!("   {}", global_path.display().to_string().cyan().bold());
     println!(
-        "\n{} Puedes abrir '{}' con tu editor para:",
-        "💡".yellow(),
-        config_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
+        "\n{} Todas las reglas que definas aquí aplicarán automáticamente para cualquier carpeta.",
+        "✨".green()
     );
-    println!("   - Añadir nuevas extensiones a las categorías existentes.");
-    println!("   - Crear nuevas categorías personalizadas (ej. Modelos 3D, Torrents, etc.).");
-    println!("   - Cambiar los iconos de cada categoría.");
+    println!("   - Añade extensiones a las categorías existentes (ej. 'ipynb' en Codigo).");
+    println!("   - Crea tus propias categorías (ej. Modelos3D, Torrents, Libros).");
 
     Ok(())
+}
+
+fn handle_show_config_path(target_dir: &Path) {
+    let resolution = Config::resolve(Some(target_dir));
+    println!("\n{}", "⚙️  Configuración activa de OrderFiles:".bold());
+    println!("{}", "─".repeat(50).dimmed());
+
+    match resolution.source_path {
+        Some(path) => {
+            let is_global = Config::global_config_path().map_or(false, |g| g == path);
+            let tipo = if is_global {
+                "Global (Aplica a todo el sistema)".green()
+            } else {
+                "Local (Específico para esta carpeta)".yellow()
+            };
+
+            println!("  Archivo : {}", path.display().to_string().cyan().bold());
+            println!("  Ámbito  : {}", tipo);
+            println!(
+                "  Reglas  : {} categorías cargadas",
+                resolution.config.categories.len()
+            );
+        }
+        None => {
+            println!(
+                "  Archivo : {}",
+                "Ninguno (usando reglas de fábrica)".dimmed()
+            );
+            println!(
+                "  Reglas  : {} categorías predeterminadas",
+                resolution.config.categories.len()
+            );
+        }
+    }
+    println!("{}", "─".repeat(50).dimmed());
 }
 
 fn run_cli_mode(args: &Cli, organizer: &Organizer) -> Result<()> {
@@ -264,7 +301,12 @@ fn main() -> Result<()> {
     let target = &args.path;
 
     if args.init_config {
-        return handle_init_config(target);
+        return handle_init_config();
+    }
+
+    if args.config_path {
+        handle_show_config_path(target);
+        return Ok(());
     }
 
     let config = Config::load_or_default(Some(target));

@@ -65,7 +65,13 @@ pub struct Cli {
 
     #[arg(
         long = "init-config",
-        help = "Generar un archivo de configuración 'orderfiles.toml' de ejemplo con todas las reglas"
+        help = "Generar o restablecer el archivo de configuración global (~/.config/orderfiles/config.toml)"
     )]
     pub init_config: bool,
+
+    #[arg(
+        long = "config-path",
+        help = "Mostrar la ruta del archivo de configuración activo y su estado"
+    )]
+    pub config_path: bool,
 }

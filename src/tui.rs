@@ -597,21 +597,14 @@ impl TuiApp {
                         .fg(Color::Green)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::raw("crea "),
+                Span::raw("edita "),
                 Span::styled(
-                    "'orderfiles.toml'",
+                    "~/.config/orderfiles/config.toml",
                     Style::default()
                         .fg(Color::Cyan)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::raw(" o usa "),
-                Span::styled(
-                    "'orderfiles --init-config'",
-                    Style::default()
-                        .fg(Color::Cyan)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::raw(" para personalizar."),
+                Span::raw(" (aplica a todo el sistema)."),
             ]),
             Line::from(vec![
                 Span::styled("   Atajos: ", Style::default().fg(Color::DarkGray)),

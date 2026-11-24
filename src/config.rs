@@ -139,48 +139,77 @@ impl Default for Config {
     }
 }
 
+pub struct ConfigResolution {
+    pub config: Config,
+    pub source_path: Option<PathBuf>,
+}
+
 impl Config {
-    pub fn load_or_default(target_dir: Option<&Path>) -> Self {
-        // 1. Probar en el directorio destino: target_dir/orderfiles.toml
-        if let Some(target) = target_dir {
-            let local_path = target.join("orderfiles.toml");
-            if local_path.exists() {
-                if let Ok(content) = fs::read_to_string(&local_path) {
-                    if let Ok(config) = toml::from_str::<Config>(&content) {
-                        return config;
-                    }
-                }
-            }
-        }
-
-        // 2. Probar en el directorio de trabajo actual (donde se ejecuta el comando): ./orderfiles.toml
-        if let Ok(cwd) = std::env::current_dir() {
-            let cwd_path = cwd.join("orderfiles.toml");
-            if cwd_path.exists() {
-                if let Ok(content) = fs::read_to_string(&cwd_path) {
-                    if let Ok(config) = toml::from_str::<Config>(&content) {
-                        return config;
-                    }
-                }
-            }
-        }
-
-        // 3. Probar en ~/.config/orderfiles/config.toml
-        if let Some(home) = std::env::var_os("HOME") {
-            let global_path = PathBuf::from(home)
+    /// Devuelve la ruta estándar del archivo de configuración global del usuario
+    pub fn global_config_path() -> Option<PathBuf> {
+        let home = std::env::var_os("HOME")?;
+        Some(
+            PathBuf::from(home)
                 .join(".config")
                 .join("orderfiles")
-                .join("config.toml");
+                .join("config.toml"),
+        )
+    }
+
+    /// Resuelve y carga la configuración:
+    /// 1. Si existe configuración local específica en target_dir (.orderfiles.toml u orderfiles.toml), tiene prioridad para proyectos aislados.
+    /// 2. Si no, busca la configuración global del usuario (~/.config/orderfiles/config.toml).
+    ///    Si no existe aún en disco, la crea automáticamente con los valores por defecto.
+    /// 3. Si no es posible escribir ni leer el archivo global, usa los valores por defecto en memoria.
+    pub fn resolve(target_dir: Option<&Path>) -> ConfigResolution {
+        // 1. Caso opcional: configuración local de carpeta
+        if let Some(target) = target_dir {
+            for filename in &["orderfiles.toml", ".orderfiles.toml"] {
+                let local_path = target.join(filename);
+                if local_path.exists() {
+                    if let Ok(content) = fs::read_to_string(&local_path) {
+                        if let Ok(config) = toml::from_str::<Config>(&content) {
+                            return ConfigResolution {
+                                config,
+                                source_path: Some(local_path),
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Configuración global centralizada (~/.config/orderfiles/config.toml)
+        if let Some(global_path) = Self::global_config_path() {
             if global_path.exists() {
                 if let Ok(content) = fs::read_to_string(&global_path) {
                     if let Ok(config) = toml::from_str::<Config>(&content) {
-                        return config;
+                        return ConfigResolution {
+                            config,
+                            source_path: Some(global_path),
+                        };
                     }
                 }
+            } else {
+                // Auto-inicializar la configuración global en la primera ejecución
+                let default_config = Self::default();
+                let _ = default_config.save_to_file(&global_path);
+                return ConfigResolution {
+                    config: default_config,
+                    source_path: Some(global_path),
+                };
             }
         }
 
-        Self::default()
+        // 3. Fallback de fábrica en memoria
+        ConfigResolution {
+            config: Self::default(),
+            source_path: None,
+        }
+    }
+
+    pub fn load_or_default(target_dir: Option<&Path>) -> Self {
+        Self::resolve(target_dir).config
     }
 
     pub fn save_to_file(&self, path: &Path) -> Result<()> {

@@ -7,7 +7,8 @@ Un organizador de archivos ultrarrápido, visual y seguro escrito en **Rust**. D
 ## ✨ Características Principales
 
 - 🖥️ **TUI Interactiva (Terminal User Interface)**: Construida con `ratatui` y `crossterm`. Permite previsualizar qué archivos se moverán, marcarlos o desmarcarlos con el teclado y confirmar en un solo clic.
-- ⚙️ **Configuración Totalmente Personalizable (`orderfiles.toml`)**:
+- ⚙️ **Configuración Centralizada Única (`~/.config/orderfiles/config.toml`)**:
+  - Un único archivo global para todas las carpetas del sistema.
   - Añade nuevas categorías (ej. Modelos 3D, Torrents, Libros, etc.).
   - Configura tus propias extensiones e iconos emoji por categoría.
 - 🛡️ **Seguridad contra colisiones**: Si ya existe un archivo con el mismo nombre en destino, renombra automáticamente a `archivo (1).ext` para no sobreescribir jamás tus datos.
@@ -68,13 +69,19 @@ cargo run -- ~/prueba_descargas --undo
 
 ## ⚙️ Personalizar Formatos y Categorías
 
-Puedes generar un archivo `orderfiles.toml` en cualquier carpeta o en `~/.config/orderfiles/config.toml`:
+OrderFiles utiliza un **único archivo de configuración central** en `~/.config/orderfiles/config.toml` que aplica automáticamente a cualquier carpeta de tu equipo.
 
+### Ver la ruta de tu configuración activa:
 ```bash
-cargo run -- --init-config
+orderfiles --config-path
 ```
 
-Esto creará un archivo `orderfiles.toml` con esta estructura:
+### Crear o inicializar tu configuración:
+```bash
+orderfiles --init-config
+```
+
+Esto generará el archivo `~/.config/orderfiles/config.toml` con esta estructura:
 
 ```toml
 [categories.Imagenes]
@@ -94,6 +101,8 @@ extensions = ["blend", "fbx", "obj", "stl"]
 icon = "🧲"
 extensions = ["torrent"]
 ```
+
+> **Nota para proyectos aislados**: Si en alguna carpeta específica necesitas reglas especiales que no afecten al resto del sistema, puedes crear un archivo local `orderfiles.toml` dentro de esa carpeta. OrderFiles le dará prioridad a ese directorio puntual.
 
 ---
 

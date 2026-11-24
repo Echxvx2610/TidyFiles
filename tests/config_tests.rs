@@ -57,3 +57,25 @@ fn test_organize_with_custom_config() {
     organizer.execute_plan(&plan).unwrap();
     assert!(root.join("Torrents").join("ubuntu.torrent").exists());
 }
+
+#[test]
+fn test_local_config_override() {
+    let temp = tempdir().unwrap();
+    let root = temp.path();
+
+    // Crear un archivo local orderfiles.toml con una regla local
+    let local_toml = r#"
+[categories.MusicaLocal]
+icon = "🎸"
+extensions = ["mp3", "wav"]
+"#;
+    fs::write(root.join("orderfiles.toml"), local_toml).unwrap();
+
+    let resolution = Config::resolve(Some(root));
+    assert!(resolution.source_path.is_some());
+    assert_eq!(
+        resolution.source_path.unwrap(),
+        root.join("orderfiles.toml")
+    );
+    assert!(resolution.config.categories.contains_key("MusicaLocal"));
+}
