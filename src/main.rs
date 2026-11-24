@@ -101,15 +101,16 @@ fn handle_init_config() -> Result<()> {
 
     if global_path.exists() {
         println!(
-            "{} Ya tienes tu archivo de configuración global en:",
+            "{} Tu archivo de configuración global está en:",
             "ℹ️".cyan().bold()
         );
-        println!("   {}", global_path.display().to_string().yellow().bold());
+        println!("   {}", global_path.display().to_string().cyan().bold());
         println!(
-            "\n{} Puedes editarlo directamente con tu editor preferido (nano, code, nvim, etc.):",
+            "\n{} Para abrirlo y editarlo ahora mismo, corre:",
             "💡".yellow()
         );
-        println!("   code {}", global_path.display());
+        println!("   orderfiles --edit-config");
+        println!("   # o manualmente: code {}", global_path.display());
         return Ok(());
     }
 
@@ -122,13 +123,96 @@ fn handle_init_config() -> Result<()> {
     );
     println!("   {}", global_path.display().to_string().cyan().bold());
     println!(
-        "\n{} Todas las reglas que definas aquí aplicarán automáticamente para cualquier carpeta.",
+        "\n{} Todas las reglas que definas aquí aplicarán automáticamente a todas tus carpetas.",
         "✨".green()
     );
     println!("   - Añade extensiones a las categorías existentes (ej. 'ipynb' en Codigo).");
     println!("   - Crea tus propias categorías (ej. Modelos3D, Torrents, Libros).");
+    println!("\n{} Puedes editarlo ejecutando: 'orderfiles --edit-config'", "💡".yellow());
 
     Ok(())
+}
+
+fn handle_init_local(target_dir: &Path) -> Result<()> {
+    let local_path = target_dir.join("orderfiles.toml");
+    if local_path.exists() {
+        println!(
+            "{} Ya existe una configuración local en esta carpeta:",
+            "⚠️".yellow().bold()
+        );
+        println!("   {}", local_path.display().to_string().yellow());
+        return Ok(());
+    }
+
+    let default_config = Config::default();
+    default_config.save_to_file(&local_path)?;
+
+    println!(
+        "{} Configuración local creada con éxito en:",
+        "✅".green().bold()
+    );
+    println!("   {}", local_path.display().to_string().cyan().bold());
+    println!(
+        "\n{} Esta configuración sobrescribirá la global únicamente cuando organices esta carpeta.",
+        "ℹ️".cyan()
+    );
+
+    Ok(())
+}
+
+fn handle_edit_config(target_dir: &Path) -> Result<()> {
+    let resolution = Config::resolve(Some(target_dir));
+    let path_to_edit = match resolution.source_path {
+        Some(p) => p,
+        None => {
+            let global = Config::global_config_path().context("No se pudo obtener la ruta global")?;
+            if !global.exists() {
+                Config::default().save_to_file(&global)?;
+            }
+            global
+        }
+    };
+
+    println!(
+        "{} Abriendo archivo de configuración: {}",
+        "📝".cyan(),
+        path_to_edit.display().to_string().bold().yellow()
+    );
+
+    let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
+        if which_command_exists("code") {
+            "code".to_string()
+        } else if which_command_exists("nano") {
+            "nano".to_string()
+        } else if which_command_exists("vim") {
+            "vim".to_string()
+        } else {
+            "xdg-open".to_string()
+        }
+    });
+
+    let status = std::process::Command::new(&editor)
+        .arg(&path_to_edit)
+        .status()
+        .with_context(|| format!("No se pudo ejecutar el editor '{}'", editor))?;
+
+    if !status.success() {
+        println!(
+            "{} El editor finalizó con código: {}",
+            "⚠️".yellow(),
+            status
+        );
+    }
+
+    Ok(())
+}
+
+fn which_command_exists(cmd: &str) -> bool {
+    std::process::Command::new("which")
+        .arg(cmd)
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
 }
 
 fn handle_show_config_path(target_dir: &Path) {
@@ -302,6 +386,14 @@ fn main() -> Result<()> {
 
     if args.init_config {
         return handle_init_config();
+    }
+
+    if args.init_local {
+        return handle_init_local(target);
+    }
+
+    if args.edit_config {
+        return handle_edit_config(target);
     }
 
     if args.config_path {
