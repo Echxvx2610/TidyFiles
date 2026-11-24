@@ -877,21 +877,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "orderfiles"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "colored",
- "crossterm",
- "ratatui",
- "serde",
- "serde_json",
- "tempfile",
- "toml",
-]
-
-[[package]]
 name = "palette"
 version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1634,6 +1619,21 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.10",
+]
+
+[[package]]
+name = "tidyfiles"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "colored",
+ "crossterm",
+ "ratatui",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toml",
 ]
 
 [[package]]

@@ -151,20 +151,20 @@ impl Config {
         Some(
             PathBuf::from(home)
                 .join(".config")
-                .join("orderfiles")
+                .join("tidyfiles")
                 .join("config.toml"),
         )
     }
 
     /// Resuelve y carga la configuración:
-    /// 1. Si existe configuración local específica en target_dir (.orderfiles.toml u orderfiles.toml), tiene prioridad para proyectos aislados.
-    /// 2. Si no, busca la configuración global del usuario (~/.config/orderfiles/config.toml).
+    /// 1. Si existe configuración local específica en target_dir (.tidyfiles.toml u tidyfiles.toml), tiene prioridad para proyectos aislados.
+    /// 2. Si no, busca la configuración global del usuario (~/.config/tidyfiles/config.toml).
     ///    Si no existe aún en disco, la crea automáticamente con los valores por defecto.
     /// 3. Si no es posible escribir ni leer el archivo global, usa los valores por defecto en memoria.
     pub fn resolve(target_dir: Option<&Path>) -> ConfigResolution {
         // 1. Caso opcional: configuración local de carpeta
         if let Some(target) = target_dir {
-            for filename in &["orderfiles.toml", ".orderfiles.toml"] {
+            for filename in &["tidyfiles.toml", ".tidyfiles.toml"] {
                 let local_path = target.join(filename);
                 if local_path.exists() {
                     if let Ok(content) = fs::read_to_string(&local_path) {
@@ -179,7 +179,7 @@ impl Config {
             }
         }
 
-        // 2. Configuración global centralizada (~/.config/orderfiles/config.toml)
+        // 2. Configuración global centralizada (~/.config/tidyfiles/config.toml)
         if let Some(global_path) = Self::global_config_path() {
             if global_path.exists() {
                 if let Ok(content) = fs::read_to_string(&global_path) {

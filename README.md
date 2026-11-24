@@ -1,4 +1,4 @@
-# ⚡ OrderFiles
+# ⚡ TidyFiles
 
 Un organizador de archivos ultrarrápido, visual y seguro escrito en **Rust**. Diseñado especialmente para carpetas saturadas de descargas y documentos desordenados.
 
@@ -7,7 +7,7 @@ Un organizador de archivos ultrarrápido, visual y seguro escrito en **Rust**. D
 ## ✨ Características Principales
 
 - 🖥️ **TUI Interactiva (Terminal User Interface)**: Construida con `ratatui` y `crossterm`. Permite previsualizar qué archivos se moverán, marcarlos o desmarcarlos con el teclado y confirmar en un solo clic.
-- ⚙️ **Configuración Centralizada Única (`~/.config/orderfiles/config.toml`)**:
+- ⚙️ **Configuración Centralizada Única (`~/.config/tidyfiles/config.toml`)**:
   - Un único archivo global para todas las carpetas del sistema.
   - Añade nuevas categorías (ej. Modelos 3D, Torrents, Libros, etc.).
   - Configura tus propias extensiones e iconos emoji por categoría.
@@ -19,7 +19,7 @@ Un organizador de archivos ultrarrápido, visual y seguro escrito en **Rust**. D
 
 ## 🎮 Controles de la Interfaz TUI
 
-Al ejecutar `orderfiles <carpeta>` en tu terminal, se abrirá la interfaz interactiva con los siguientes controles:
+Al ejecutar `tidyfiles <carpeta>` en tu terminal, se abrirá la interfaz interactiva con los siguientes controles:
 
 | Tecla | Acción |
 | :--- | :--- |
@@ -40,7 +40,7 @@ Al ejecutar `orderfiles <carpeta>` en tu terminal, se abrirá la interfaz intera
 ```bash
 cargo build --release
 ```
-El binario ejecutable estará listo en `./target/release/orderfiles`.
+El binario ejecutable estará listo en `./target/release/tidyfiles`.
 
 ### 2. Probar en una carpeta de prueba
 Puedes crear una carpeta de prueba con varios archivos para ver la TUI en acción:
@@ -69,19 +69,19 @@ cargo run -- ~/prueba_descargas --undo
 
 ## ⚙️ Personalizar Formatos y Categorías
 
-OrderFiles utiliza un **único archivo de configuración central** en `~/.config/orderfiles/config.toml` que aplica automáticamente a cualquier carpeta de tu equipo.
+TidyFiles utiliza un **único archivo de configuración central** en `~/.config/tidyfiles/config.toml` que aplica automáticamente a cualquier carpeta de tu equipo.
 
 ### Ver la ruta de tu configuración activa:
 ```bash
-orderfiles --config-path
+tidyfiles --config-path
 ```
 
 ### Crear o inicializar tu configuración:
 ```bash
-orderfiles --init-config
+tidyfiles --init-config
 ```
 
-Esto generará el archivo `~/.config/orderfiles/config.toml` con esta estructura:
+Esto generará el archivo `~/.config/tidyfiles/config.toml` con esta estructura:
 
 ```toml
 [categories.Imagenes]
@@ -102,7 +102,7 @@ icon = "🧲"
 extensions = ["torrent"]
 ```
 
-> **Nota para proyectos aislados**: Si en alguna carpeta específica necesitas reglas especiales que no afecten al resto del sistema, puedes crear un archivo local `orderfiles.toml` dentro de esa carpeta. OrderFiles le dará prioridad a ese directorio puntual.
+> **Nota para proyectos aislados**: Si en alguna carpeta específica necesitas reglas especiales que no afecten al resto del sistema, puedes crear un archivo local `tidyfiles.toml` dentro de esa carpeta. TidyFiles le dará prioridad a ese directorio puntual.
 
 ---
 

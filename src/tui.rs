@@ -265,7 +265,7 @@ impl TuiApp {
     fn render_header(&self, frame: &mut Frame, area: Rect) {
         let title_spans = vec![
             Span::styled(
-                " ⚡ OrderFiles ",
+                " ⚡ TidyFiles ",
                 Style::default()
                     .fg(Color::Cyan)
                     .add_modifier(Modifier::BOLD),
@@ -599,7 +599,7 @@ impl TuiApp {
                 ),
                 Span::raw("edita "),
                 Span::styled(
-                    "~/.config/orderfiles/config.toml",
+                    "~/.config/tidyfiles/config.toml",
                     Style::default()
                         .fg(Color::Cyan)
                         .add_modifier(Modifier::BOLD),

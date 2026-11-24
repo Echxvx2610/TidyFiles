@@ -3,11 +3,11 @@ use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "orderfiles",
-    author = "OrderFiles Team",
+    name = "tidyfiles",
+    author = "TidyFiles Team",
     version = "0.2.0",
     about = "⚡ Organizador ultrarrápido y seguro de archivos para directorios desordenados en Rust",
-    long_about = "OrderFiles clasifica automáticamente archivos por tipo (imágenes, documentos, videos, comprimidos, etc.),\ncon soporte para interfaz visual interactiva (TUI), simulación (dry-run), historial y reversión (undo).\n\n⚙️ SISTEMA DE CONFIGURACIÓN:\n  • Global (Predeterminado): Se almacena en '~/.config/orderfiles/config.toml'.\n    Cualquier regla o categoría que definas aquí aplicará a todas las carpetas del sistema.\n  • Local (Opcional): Si colocas un archivo 'orderfiles.toml' dentro de una carpeta específica,\n    tendrá prioridad sobre la configuración global únicamente para ese directorio.\n\nEjemplos:\n  orderfiles ~/Downloads             # Abre la interfaz visual TUI en Descargas\n  orderfiles ~/Downloads --dry-run   # Muestra qué se movería sin tocar el disco\n  orderfiles ~/Downloads --undo      # Revierte la última organización realizada\n  orderfiles --config-path           # Muestra qué archivo de configuración está activo\n  orderfiles --edit-config           # Abre tu configuración en tu editor ($EDITOR, code, nano)\n  orderfiles --init-config           # Crea/muestra la configuración global (~/.config/orderfiles/config.toml)\n  orderfiles --init-local            # Crea una plantilla 'orderfiles.toml' en la carpeta actual"
+    long_about = "TidyFiles clasifica automáticamente archivos por tipo (imágenes, documentos, videos, comprimidos, etc.),\ncon soporte para interfaz visual interactiva (TUI), simulación (dry-run), historial y reversión (undo).\n\n⚙️ SISTEMA DE CONFIGURACIÓN:\n  • Global (Predeterminado): Se almacena en '~/.config/tidyfiles/config.toml'.\n    Cualquier regla o categoría que definas aquí aplicará a todas las carpetas del sistema.\n  • Local (Opcional): Si colocas un archivo 'tidyfiles.toml' dentro de una carpeta específica,\n    tendrá prioridad sobre la configuración global únicamente para ese directorio.\n\nEjemplos:\n  tidyfiles ~/Downloads             # Abre la interfaz visual TUI en Descargas\n  tidyfiles ~/Downloads --dry-run   # Muestra qué se movería sin tocar el disco\n  tidyfiles ~/Downloads --undo      # Revierte la última organización realizada\n  tidyfiles --config-path           # Muestra qué archivo de configuración está activo\n  tidyfiles --edit-config           # Abre tu configuración en tu editor ($EDITOR, code, nano)\n  tidyfiles --init-config           # Crea/muestra la configuración global (~/.config/tidyfiles/config.toml)\n  tidyfiles --init-local            # Crea una plantilla 'tidyfiles.toml' en la carpeta actual"
 )]
 pub struct Cli {
     #[arg(
@@ -65,13 +65,13 @@ pub struct Cli {
 
     #[arg(
         long = "init-config",
-        help = "Generar o consultar el archivo de configuración global (~/.config/orderfiles/config.toml)"
+        help = "Generar o consultar el archivo de configuración global (~/.config/tidyfiles/config.toml)"
     )]
     pub init_config: bool,
 
     #[arg(
         long = "init-local",
-        help = "Crear un archivo de configuración local ('orderfiles.toml') para la carpeta actual"
+        help = "Crear un archivo de configuración local ('tidyfiles.toml') para la carpeta actual"
     )]
     pub init_local: bool,
 
@@ -83,7 +83,7 @@ pub struct Cli {
 
     #[arg(
         long = "config-path",
-        help = "Mostrar si se está usando la configuración global (~/.config) o una local (orderfiles.toml)"
+        help = "Mostrar si se está usando la configuración global (~/.config) o una local (tidyfiles.toml)"
     )]
     pub config_path: bool,
 }

@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-pub const HISTORY_FILE_NAME: &str = ".orderfiles_history.json";
+pub const HISTORY_FILE_NAME: &str = ".tidyfiles_history.json";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MoveRecord {

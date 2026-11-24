@@ -1,5 +1,5 @@
-use orderfiles::categories::CategoryRegistry;
-use orderfiles::organizer::{Organizer, OrganizerOptions};
+use tidyfiles::categories::CategoryRegistry;
+use tidyfiles::organizer::{Organizer, OrganizerOptions};
 use std::fs;
 use std::path::Path;
 use tempfile::tempdir;

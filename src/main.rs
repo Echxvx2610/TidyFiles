@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use colored::*;
-use orderfiles::cli::Cli;
-use orderfiles::config::Config;
-use orderfiles::organizer::{Organizer, OrganizerOptions};
-use orderfiles::tui::TuiApp;
+use tidyfiles::cli::Cli;
+use tidyfiles::config::Config;
+use tidyfiles::organizer::{Organizer, OrganizerOptions};
+use tidyfiles::tui::TuiApp;
 use std::io::IsTerminal;
 use std::path::Path;
 
@@ -34,7 +34,7 @@ fn print_banner() {
     println!(
         "{}        {}          {}",
         "║".cyan().bold(),
-        "📁 OrderFiles (Rust Engine)".bright_white().bold(),
+        "📁 TidyFiles (Rust Engine)".bright_white().bold(),
         "║".cyan().bold()
     );
     println!(
@@ -109,7 +109,7 @@ fn handle_init_config() -> Result<()> {
             "\n{} Para abrirlo y editarlo ahora mismo, corre:",
             "💡".yellow()
         );
-        println!("   orderfiles --edit-config");
+        println!("   tidyfiles --edit-config");
         println!("   # o manualmente: code {}", global_path.display());
         return Ok(());
     }
@@ -128,13 +128,13 @@ fn handle_init_config() -> Result<()> {
     );
     println!("   - Añade extensiones a las categorías existentes (ej. 'ipynb' en Codigo).");
     println!("   - Crea tus propias categorías (ej. Modelos3D, Torrents, Libros).");
-    println!("\n{} Puedes editarlo ejecutando: 'orderfiles --edit-config'", "💡".yellow());
+    println!("\n{} Puedes editarlo ejecutando: 'tidyfiles --edit-config'", "💡".yellow());
 
     Ok(())
 }
 
 fn handle_init_local(target_dir: &Path) -> Result<()> {
-    let local_path = target_dir.join("orderfiles.toml");
+    let local_path = target_dir.join("tidyfiles.toml");
     if local_path.exists() {
         println!(
             "{} Ya existe una configuración local en esta carpeta:",
@@ -217,7 +217,7 @@ fn which_command_exists(cmd: &str) -> bool {
 
 fn handle_show_config_path(target_dir: &Path) {
     let resolution = Config::resolve(Some(target_dir));
-    println!("\n{}", "⚙️  Configuración activa de OrderFiles:".bold());
+    println!("\n{}", "⚙️  Configuración activa de TidyFiles:".bold());
     println!("{}", "─".repeat(50).dimmed());
 
     match resolution.source_path {
@@ -372,7 +372,7 @@ fn run_cli_mode(args: &Cli, organizer: &Organizer) -> Result<()> {
     );
     println!(
         "   {}",
-        format!("orderfiles {} --undo", target.display())
+        format!("tidyfiles {} --undo", target.display())
             .bold()
             .cyan()
     );

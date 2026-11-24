@@ -1,6 +1,6 @@
-use orderfiles::categories::CategoryRegistry;
-use orderfiles::config::{CategoryConfig, Config};
-use orderfiles::organizer::{Organizer, OrganizerOptions};
+use tidyfiles::categories::CategoryRegistry;
+use tidyfiles::config::{CategoryConfig, Config};
+use tidyfiles::organizer::{Organizer, OrganizerOptions};
 use std::fs;
 use std::path::Path;
 use tempfile::tempdir;
@@ -63,19 +63,19 @@ fn test_local_config_override() {
     let temp = tempdir().unwrap();
     let root = temp.path();
 
-    // Crear un archivo local orderfiles.toml con una regla local
+    // Crear un archivo local tidyfiles.toml con una regla local
     let local_toml = r#"
 [categories.MusicaLocal]
 icon = "🎸"
 extensions = ["mp3", "wav"]
 "#;
-    fs::write(root.join("orderfiles.toml"), local_toml).unwrap();
+    fs::write(root.join("tidyfiles.toml"), local_toml).unwrap();
 
     let resolution = Config::resolve(Some(root));
     assert!(resolution.source_path.is_some());
     assert_eq!(
         resolution.source_path.unwrap(),
-        root.join("orderfiles.toml")
+        root.join("tidyfiles.toml")
     );
     assert!(resolution.config.categories.contains_key("MusicaLocal"));
 }
