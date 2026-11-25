@@ -1,4 +1,5 @@
 use crate::config::Config;
+use crate::icons::display_icon;
 use crate::organizer::{Organizer, OrganizerOptions, PlanItem};
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
@@ -17,28 +18,6 @@ use std::time::Duration;
 enum ActiveView {
     FilesList,
     CategoriesHelp,
-}
-
-/// La TUI solo muestra iconos ASCII. Si una configuración antigua trae emojis,
-/// se usa una abreviatura segura basada en el nombre de la categoría.
-fn display_icon(icon: &str, category: &str) -> String {
-    let trimmed = icon.trim();
-    if !trimmed.is_empty() && trimmed.is_ascii() && trimmed.chars().all(|c| c.is_ascii_graphic()) {
-        return trimmed.chars().take(4).collect();
-    }
-
-    let mut fallback: String = category
-        .chars()
-        .filter(|c| c.is_ascii_alphanumeric())
-        .take(3)
-        .collect();
-    fallback.make_ascii_uppercase();
-
-    if fallback.is_empty() {
-        "DIR".to_string()
-    } else {
-        fallback
-    }
 }
 
 pub struct TuiApp {
@@ -650,28 +629,10 @@ impl TuiApp {
 
 #[cfg(test)]
 mod tests {
-    use super::{TuiApp, display_icon};
+    use super::TuiApp;
     use ratatui::{Terminal, backend::TestBackend};
     use std::fs;
     use tempfile::tempdir;
-
-    #[test]
-    fn keeps_ascii_icons() {
-        assert_eq!(display_icon("IMG", "Imagenes"), "IMG");
-        assert_eq!(display_icon("CODE", "Codigo"), "CODE");
-    }
-
-    #[test]
-    fn replaces_emoji_icons_with_ascii_fallback() {
-        assert_eq!(display_icon("🎬", "Videos"), "VID");
-        assert_eq!(display_icon("⚙️", "Instaladores"), "INS");
-    }
-
-    #[test]
-    fn replaces_blank_icons_with_category_fallback() {
-        assert_eq!(display_icon(" ", "Video Procesado"), "VID");
-        assert_eq!(display_icon("", "Otros"), "OTR");
-    }
 
     #[test]
     fn renders_ascii_only_even_with_emoji_icons() {

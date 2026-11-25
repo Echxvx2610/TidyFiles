@@ -37,14 +37,17 @@ Priority: `<target>/tidyfiles.toml` → `<target>/.tidyfiles.toml` → `~/.confi
 - The TUI hardcodes `include_hidden: false` and `include_unknown: false`; those flags only affect CLI mode.
 - Invalid local/global TOML is fatal and reports file plus line. Do not restore silent fallback behavior; it caused files to be moved with global rules while a local config existed.
 - Category keys with spaces require TOML quoting: `[categories."Video Procesado"]`.
-- TUI icons are ASCII-only. `display_icon` replaces emoji/blank configured icons with an abbreviation derived from the category name.
+- TUI and CLI output are ASCII-only: no emojis or decorative symbols. `icons::display_icon` replaces emoji/blank configured icons with an abbreviation derived from the category name.
+- CLI status markers are ASCII tags: `[OK]`, `[INFO]`, `[TIP]`, `[WARN]`, `[SCAN]`, `[MOVE]`, `[DRY-RUN]`, `[UNDO]`, `[EDIT]`.
+- `--help`/`-h` are fully Spanish (`USO:`, `ARGUMENTOS:`, `OPCIONES:`) via the Clap `help_template` in `cli.rs`; `src/cli.rs` has a test that rejects emojis in the rendered help.
 
 ## Architecture
 
 - `main.rs`: argument dispatch, console rendering, mode selection.
-- `cli.rs`: Clap definitions.
+- `cli.rs`: Clap definitions plus `build_command()` (Spanish help template and custom `--help`/`--version` flags).
 - `config.rs`: TOML schema, default rules, resolution/auto-init.
 - `categories.rs`: extension registry built from config.
+- `icons.rs`: ASCII-safe icon normalization shared by the TUI and the CLI.
 - `organizer.rs`: plan generation, collision renaming (`name (1).ext`), moves, undo.
 - `history.rs`: JSON transaction stack.
 - `tui.rs`: `ratatui` app; terminal restore is handled in `TuiApp::run`.
@@ -55,7 +58,7 @@ Keep planning and execution separate: `generate_plan` must remain side-effect-fr
 
 - Category names are Spanish and become destination folder names (`Imagenes`, `Documentos`, `Codigo`, `Otros`, …). Tests assert these names.
 - User-facing output, docs, and test comments are Spanish; keep new messages consistent.
-- Tests use `tempfile`; `src/tui.rs` has a small unit-test module for ASCII icon fallbacks.
+- Tests use `tempfile`; `src/icons.rs` and `src/cli.rs` have unit tests (ASCII icon fallbacks, emoji-free help) and `src/tui.rs` has a render smoke test.
 - No test/lint CI or formatter config exists; the only workflow is the tag-triggered release. `cargo fmt --check` currently fails, so repo-wide `cargo fmt` creates unrelated diffs. `cargo clippy --all-targets -- -D warnings` also fails on pre-existing lints; do not assume your change caused them.
 - `clap` reads the package version from `Cargo.toml`; release tags must match it exactly (`v0.2.0` for `0.2.0`).
 - `ROADMAP_FASES.md` is gitignored planning material, not a source of truth.

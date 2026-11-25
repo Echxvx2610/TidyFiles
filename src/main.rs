@@ -1,8 +1,9 @@
 use anyhow::{Context, Result};
-use clap::Parser;
+use clap::FromArgMatches;
 use colored::*;
 use tidyfiles::cli::Cli;
 use tidyfiles::config::Config;
+use tidyfiles::icons::display_icon;
 use tidyfiles::organizer::{Organizer, OrganizerOptions};
 use tidyfiles::tui::TuiApp;
 use std::io::IsTerminal;
@@ -32,9 +33,9 @@ fn print_banner() {
             .bold()
     );
     println!(
-        "{}        {}          {}",
+        "{}        {}               {}",
         "║".cyan().bold(),
-        "📁 TidyFiles (Rust Engine)".bright_white().bold(),
+        "TidyFiles (Rust Engine)".bright_white().bold(),
         "║".cyan().bold()
     );
     println!(
@@ -48,7 +49,7 @@ fn print_banner() {
 fn handle_undo(target_dir: &Path, organizer: &Organizer) -> Result<()> {
     println!(
         "{} Buscando historial de cambios en {}...",
-        "🔄".cyan(),
+        "[UNDO]".cyan(),
         target_dir.display().to_string().yellow()
     );
 
@@ -56,7 +57,7 @@ fn handle_undo(target_dir: &Path, organizer: &Organizer) -> Result<()> {
         Some(tx) => {
             println!(
                 "\n{} Se revirtieron con éxito {} archivo(s):",
-                "✅".green(),
+                "[OK]".green(),
                 tx.moves.len().to_string().bold().green()
             );
 
@@ -78,17 +79,20 @@ fn handle_undo(target_dir: &Path, organizer: &Organizer) -> Result<()> {
                     "   {:>3}. {} {} {}",
                     i + 1,
                     from_name.cyan(),
-                    "↩".yellow(),
+                    "->".yellow(),
                     to_dir.green()
                 );
             }
 
-            println!("\n{}", "🎉 Directorio restaurado con éxito.".green().bold());
+            println!(
+                "\n{}",
+                "[OK] Directorio restaurado con éxito.".green().bold()
+            );
         }
         None => {
             println!(
                 "{} No se encontró ningún historial previo para deshacer en este directorio.",
-                "ℹ️".yellow()
+                "[INFO]".yellow()
             );
         }
     }
@@ -102,12 +106,12 @@ fn handle_init_config() -> Result<()> {
     if global_path.exists() {
         println!(
             "{} Tu archivo de configuración global está en:",
-            "ℹ️".cyan().bold()
+            "[INFO]".cyan().bold()
         );
         println!("   {}", global_path.display().to_string().cyan().bold());
         println!(
             "\n{} Para abrirlo y editarlo ahora mismo, corre:",
-            "💡".yellow()
+            "[TIP]".yellow()
         );
         println!("   tidyfiles --edit-config");
         println!("   # o manualmente: code {}", global_path.display());
@@ -119,16 +123,19 @@ fn handle_init_config() -> Result<()> {
 
     println!(
         "{} Configuración global generada exitosamente en:",
-        "✅".green().bold()
+        "[OK]".green().bold()
     );
     println!("   {}", global_path.display().to_string().cyan().bold());
     println!(
         "\n{} Todas las reglas que definas aquí aplicarán automáticamente a todas tus carpetas.",
-        "✨".green()
+        "[INFO]".green()
     );
     println!("   - Añade extensiones a las categorías existentes (ej. 'ipynb' en Codigo).");
     println!("   - Crea tus propias categorías (ej. Modelos3D, Torrents, Libros).");
-    println!("\n{} Puedes editarlo ejecutando: 'tidyfiles --edit-config'", "💡".yellow());
+    println!(
+        "\n{} Puedes editarlo ejecutando: 'tidyfiles --edit-config'",
+        "[TIP]".yellow()
+    );
 
     Ok(())
 }
@@ -138,7 +145,7 @@ fn handle_init_local(target_dir: &Path) -> Result<()> {
     if local_path.exists() {
         println!(
             "{} Ya existe una configuración local en esta carpeta:",
-            "⚠️".yellow().bold()
+            "[WARN]".yellow().bold()
         );
         println!("   {}", local_path.display().to_string().yellow());
         return Ok(());
@@ -149,12 +156,12 @@ fn handle_init_local(target_dir: &Path) -> Result<()> {
 
     println!(
         "{} Configuración local creada con éxito en:",
-        "✅".green().bold()
+        "[OK]".green().bold()
     );
     println!("   {}", local_path.display().to_string().cyan().bold());
     println!(
         "\n{} Esta configuración sobrescribirá la global únicamente cuando organices esta carpeta.",
-        "ℹ️".cyan()
+        "[INFO]".cyan()
     );
 
     Ok(())
@@ -180,7 +187,7 @@ fn handle_edit_config(target_dir: &Path) -> Result<()> {
 
     println!(
         "{} Abriendo archivo de configuración: {}",
-        "📝".cyan(),
+        "[EDIT]".cyan(),
         path_to_edit.display().to_string().bold().yellow()
     );
 
@@ -204,7 +211,7 @@ fn handle_edit_config(target_dir: &Path) -> Result<()> {
     if !status.success() {
         println!(
             "{} El editor finalizó con código: {}",
-            "⚠️".yellow(),
+            "[WARN]".yellow(),
             status
         );
     }
@@ -222,7 +229,7 @@ fn which_command_exists(cmd: &str) -> bool {
 
 fn handle_show_config_path(target_dir: &Path) -> Result<()> {
     let resolution = Config::resolve(Some(target_dir))?;
-    println!("\n{}", "⚙️  Configuración activa de TidyFiles:".bold());
+    println!("\n{}", "CONFIGURACION ACTIVA DE TIDYFILES".bold());
     println!("{}", "─".repeat(50).dimmed());
 
     match resolution.source_path {
@@ -268,7 +275,7 @@ fn run_cli_mode(args: &Cli, organizer: &Organizer) -> Result<()> {
 
     println!(
         "{} Analizando directorio: {}",
-        "🔍".cyan(),
+        "[SCAN]".cyan(),
         target.display().to_string().bold().yellow()
     );
 
@@ -277,7 +284,7 @@ fn run_cli_mode(args: &Cli, organizer: &Organizer) -> Result<()> {
     if plan.items.is_empty() {
         println!(
             "\n{} No hay archivos sueltos para organizar en este directorio.",
-            "✨".green()
+            "[INFO]".green()
         );
         if plan.skipped_dirs > 0 || plan.skipped_unrecognized > 0 {
             println!(
@@ -290,7 +297,7 @@ fn run_cli_mode(args: &Cli, organizer: &Organizer) -> Result<()> {
 
     let total_bytes: u64 = plan.items.iter().map(|item| item.file_size).sum();
 
-    println!("\n{}", "📊 Resumen de organización propuesto:".bold());
+    println!("\n{}", "RESUMEN DE ORGANIZACION PROPUESTO".bold());
     println!("{}", "─".repeat(50).dimmed());
 
     let mut sorted_categories: Vec<_> = plan.summary.iter().collect();
@@ -298,9 +305,9 @@ fn run_cli_mode(args: &Cli, organizer: &Organizer) -> Result<()> {
 
     for (cat_name, summary) in sorted_categories {
         println!(
-            "  {} {:<16} : {:>3} archivo(s) ({})",
-            summary.icon,
-            cat_name.bold(),
+            "  {} {} : {:>3} archivo(s) ({})",
+            display_icon(&summary.icon, cat_name),
+            format!("{:<16}", cat_name).bold(),
             summary.count.to_string().cyan().bold(),
             format_bytes(summary.total_bytes).dimmed()
         );
@@ -316,13 +323,13 @@ fn run_cli_mode(args: &Cli, organizer: &Organizer) -> Result<()> {
     if plan.skipped_unrecognized > 0 {
         println!(
             "  {} {} archivo(s) con extensiones no reconocidas fueron omitidos (usa --include-unknown si deseas moverlos a 'Otros')",
-            "ℹ️".dimmed(),
+            "[INFO]".dimmed(),
             plan.skipped_unrecognized
         );
     }
 
     if args.verbose || args.dry_run {
-        println!("\n{}", "📝 Detalle de movimientos:".bold());
+        println!("\n{}", "DETALLE DE MOVIMIENTOS".bold());
         for (i, item) in plan.items.iter().enumerate() {
             let src_name = item
                 .source
@@ -341,7 +348,7 @@ fn run_cli_mode(args: &Cli, organizer: &Organizer) -> Result<()> {
                 "   {:>3}. {} {} {} {}",
                 i + 1,
                 src_name.bright_white(),
-                "➜".cyan(),
+                "->".cyan(),
                 target_subpath.yellow(),
                 format!("({})", format_bytes(item.file_size)).dimmed()
             );
@@ -351,7 +358,7 @@ fn run_cli_mode(args: &Cli, organizer: &Organizer) -> Result<()> {
     if args.dry_run {
         println!(
             "\n{}",
-            "💡 Modo simulación (--dry-run). No se modificó ningún archivo en el disco."
+            "[DRY-RUN] No se modificó ningún archivo en el disco."
                 .yellow()
                 .bold()
         );
@@ -363,18 +370,18 @@ fn run_cli_mode(args: &Cli, organizer: &Organizer) -> Result<()> {
     }
 
     // Ejecutar movimientos reales
-    println!("\n{} Moviendo archivos...", "🚀".cyan().bold());
+    println!("\n{} Moviendo archivos...", "[MOVE]".cyan().bold());
     let transaction = organizer.execute_plan(&plan)?;
 
     println!(
-        "\n{} ¡Organización completada con éxito! Se movieron {} archivo(s).",
-        "🎉".green().bold(),
+        "\n{} Organización completada con éxito. Se movieron {} archivo(s).",
+        "[OK]".green().bold(),
         transaction.moves.len().to_string().bold().green()
     );
 
     println!(
         "\n{} Si necesitas revertir esta operación, corre:",
-        "💡".yellow()
+        "[TIP]".yellow()
     );
     println!(
         "   {}",
@@ -387,7 +394,11 @@ fn run_cli_mode(args: &Cli, organizer: &Organizer) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    let args = Cli::parse();
+    let matches = tidyfiles::cli::build_command().get_matches();
+    let args = match Cli::from_arg_matches(&matches) {
+        Ok(cli) => cli,
+        Err(err) => err.exit(),
+    };
     let target = &args.path;
 
     if args.init_config {
