@@ -1,6 +1,15 @@
-# TidyFiles
 
-Organizador de archivos para terminal, escrito en Rust. Clasifica los archivos sueltos de una carpeta en subdirectorios por tipo, con vista previa, interfaz interactiva y posibilidad de deshacer.
+
+<h1 align="center">
+  <img src="assets/tidyfiles-banner.png" alt="TidyFiles - File Organizer" width="850">
+</h1>
+
+<p align="center">
+  Organizador de archivos para terminal, escrito en Rust.
+  <br>
+    Clasifica los archivos sueltos de una carpeta en subdirectorios por tipo, con vista previa, interfaz interactiva y posibilidad de deshacer.
+</p>
+
 
 ## Características
 

@@ -13,3 +13,5 @@ ROADMAP_FASES.md
 # OS metadata
 .DS_Store
 
+__pycache__/
+.enjambre/
