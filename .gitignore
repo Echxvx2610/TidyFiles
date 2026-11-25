@@ -1,4 +1,15 @@
-/target
-ROADMAP_FASES.md
+# Rust build artifacts
+/target/
+*.rs.bk
+
+# TidyFiles local state and per-directory config
 .tidyfiles_history.json
 tidyfiles.toml
+.tidyfiles.toml
+
+# Local planning document
+ROADMAP_FASES.md
+
+# OS metadata
+.DS_Store
+

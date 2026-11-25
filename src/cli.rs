@@ -5,7 +5,7 @@ use std::path::PathBuf;
 #[command(
     name = "tidyfiles",
     author = "TidyFiles Team",
-    version = "0.2.0",
+    version,
     about = "⚡ Organizador ultrarrápido y seguro de archivos para directorios desordenados en Rust",
     long_about = "TidyFiles clasifica automáticamente archivos por tipo (imágenes, documentos, videos, comprimidos, etc.),\ncon soporte para interfaz visual interactiva (TUI), simulación (dry-run), historial y reversión (undo).\n\n⚙️ SISTEMA DE CONFIGURACIÓN:\n  • Global (Predeterminado): Se almacena en '~/.config/tidyfiles/config.toml'.\n    Cualquier regla o categoría que definas aquí aplicará a todas las carpetas del sistema.\n  • Local (Opcional): Si colocas un archivo 'tidyfiles.toml' dentro de una carpeta específica,\n    tendrá prioridad sobre la configuración global únicamente para ese directorio.\n\nEjemplos:\n  tidyfiles ~/Downloads             # Abre la interfaz visual TUI en Descargas\n  tidyfiles ~/Downloads --dry-run   # Muestra qué se movería sin tocar el disco\n  tidyfiles ~/Downloads --undo      # Revierte la última organización realizada\n  tidyfiles --config-path           # Muestra qué archivo de configuración está activo\n  tidyfiles --edit-config           # Abre tu configuración en tu editor ($EDITOR, code, nano)\n  tidyfiles --init-config           # Crea/muestra la configuración global (~/.config/tidyfiles/config.toml)\n  tidyfiles --init-local            # Crea una plantilla 'tidyfiles.toml' en la carpeta actual"
 )]

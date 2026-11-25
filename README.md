@@ -1,114 +1,141 @@
-# ⚡ TidyFiles
+# TidyFiles
 
-Un organizador de archivos ultrarrápido, visual y seguro escrito en **Rust**. Diseñado especialmente para carpetas saturadas de descargas y documentos desordenados.
+Organizador de archivos para terminal, escrito en Rust. Clasifica los archivos sueltos de una carpeta en subdirectorios por tipo, con vista previa, interfaz interactiva y posibilidad de deshacer.
 
----
+## Características
 
-## ✨ Características Principales
+- Interfaz TUI construida con `ratatui` y `crossterm`.
+- Configuración global en `~/.config/tidyfiles/config.toml` y configuración local opcional por carpeta.
+- Categorías y extensiones personalizables.
+- Resolución automática de colisiones mediante nombres como `archivo (1).ext`.
+- Historial de transacciones y comando para deshacer.
+- Modo CLI, simulación con `--dry-run` y soporte para archivos ocultos o desconocidos.
+- Movimiento seguro entre distintos sistemas de archivos.
 
-- 🖥️ **TUI Interactiva (Terminal User Interface)**: Construida con `ratatui` y `crossterm`. Permite previsualizar qué archivos se moverán, marcarlos o desmarcarlos con el teclado y confirmar en un solo clic.
-- ⚙️ **Configuración Centralizada Única (`~/.config/tidyfiles/config.toml`)**:
-  - Un único archivo global para todas las carpetas del sistema.
-  - Añade nuevas categorías (ej. Modelos 3D, Torrents, Libros, etc.).
-  - Configura tus propias extensiones e iconos emoji por categoría.
-- 🛡️ **Seguridad contra colisiones**: Si ya existe un archivo con el mismo nombre en destino, renombra automáticamente a `archivo (1).ext` para no sobreescribir jamás tus datos.
-- 🔄 **Sistema Undo / Deshacer**: Mantiene un historial seguro de las transacciones para restaurar los archivos a su posición original si cambias de opinión.
-- 🚀 **Modo CLI / Scripting**: Soporte para scripts desatendidos, modo de simulación (`--dry-run`) y argumentos de consola directos.
+## Instalación
 
----
+### Linux y macOS
 
-## 🎮 Controles de la Interfaz TUI
+```bash
+curl -fsSL https://raw.githubusercontent.com/Echxvx2610/TidyFiles/main/install.sh | sh
+```
 
-Al ejecutar `tidyfiles <carpeta>` en tu terminal, se abrirá la interfaz interactiva con los siguientes controles:
+El script descarga la última release, verifica su suma SHA256 y instala el binario en `~/.local/bin`.
 
-| Tecla | Acción |
-| :--- | :--- |
-| `↑` / `↓` o `k` / `j` | Navegar por la lista de archivos detectados |
-| `[Espacio]` | Seleccionar / Deseleccionar el archivo resaltado |
-| `[a]` | Seleccionar o deseleccionar todos los archivos |
-| `[Enter]` o `[o]` | **Organizar**: Mover los archivos seleccionados a sus carpetas |
-| `[u]` | **Deshacer**: Revertir la última organización en este directorio |
-| `[c]` | **Ver Formatos**: Ventana modal con todas las reglas y categorías activas |
-| `[r]` | Recargar directorio |
-| `[q]` o `[Esc]` | Salir de la aplicación |
+Variables opcionales:
 
----
+```bash
+TIDYFILES_INSTALL_DIR=/usr/local/bin \
+TIDYFILES_VERSION=v0.2.0 \
+  curl -fsSL https://raw.githubusercontent.com/Echxvx2610/TidyFiles/main/install.sh | sh
+```
 
-## 🚀 Instalación y Uso
+### Desde el código
 
-### 1. Compilar en modo Release
 ```bash
 cargo build --release
 ```
-El binario ejecutable estará listo en `./target/release/tidyfiles`.
 
-### 2. Probar en una carpeta de prueba
-Puedes crear una carpeta de prueba con varios archivos para ver la TUI en acción:
+El binario queda en `target/release/tidyfiles`. Los binarios de cada release también están disponibles en GitHub Releases.
+
+## Uso
+
+### Interfaz interactiva
+
 ```bash
-# Crear carpeta de prueba con archivos simulados
-mkdir -p ~/prueba_descargas && touch ~/prueba_descargas/{foto.jpg,meme.png,factura.pdf,tesis.docx,video.mp4,musica.mp3,backup.zip,script.py,desconocido.custom}
-
-# Abrir en modo TUI visual interactiva
-cargo run -- ~/prueba_descargas
+tidyfiles <carpeta>
 ```
 
-### 3. Modo CLI Directo (Sin interfaz gráfica)
-Si deseas usarlo en scripts o automatizaciones:
+Si la entrada y la salida son una terminal, se abre la TUI. Para forzar el modo CLI:
+
 ```bash
-# Simular sin mover nada (Dry Run)
-cargo run -- ~/prueba_descargas --dry-run
-
-# Ejecutar organización directa por CLI
-cargo run -- ~/prueba_descargas --cli
-
-# Deshacer directamente desde consola
-cargo run -- ~/prueba_descargas --undo
+tidyfiles <carpeta> --cli
 ```
 
----
+### Controles de la TUI
 
-## ⚙️ Personalizar Formatos y Categorías
+| Tecla | Acción |
+| :--- | :--- |
+| `Flechas` o `k` / `j` | Navegar por la lista |
+| `Espacio` | Seleccionar o deseleccionar un archivo |
+| `a` | Seleccionar o deseleccionar todos |
+| `Enter` u `o` | Organizar los archivos seleccionados |
+| `u` | Deshacer la última organización |
+| `c` | Ver categorías y formatos activos |
+| `r` | Recargar el directorio |
+| `q` o `Esc` | Salir |
 
-TidyFiles utiliza un **único archivo de configuración central** en `~/.config/tidyfiles/config.toml` que aplica automáticamente a cualquier carpeta de tu equipo.
+### Modo CLI
 
-### Ver la ruta de tu configuración activa:
 ```bash
-tidyfiles --config-path
+# Simular sin mover archivos
+tidyfiles <carpeta> --dry-run
+
+# Organizar directamente
+tidyfiles <carpeta> --cli
+
+# Deshacer la última organización
+tidyfiles <carpeta> --undo
 ```
 
-### Crear o inicializar tu configuración:
+### Opciones
+
+| Opción | Descripción |
+| :--- | :--- |
+| `--tui` | Forzar la interfaz interactiva |
+| `--cli` | Forzar el modo CLI |
+| `-n`, `--dry-run` | Mostrar los movimientos sin ejecutarlos |
+| `-u`, `--undo` | Revertir la última organización |
+| `--hidden` | Incluir archivos ocultos |
+| `--include-unknown` | Mover extensiones desconocidas a `Otros` |
+| `-v`, `--verbose` | Mostrar el detalle de cada archivo |
+| `--init-config` | Crear la configuración global si no existe |
+| `--init-local` | Crear `tidyfiles.toml` en la carpeta actual |
+| `--edit-config` | Abrir la configuración activa en el editor |
+| `--config-path` | Mostrar la configuración que se está usando |
+
+`--hidden` y `--include-unknown` solo aplican al modo CLI; la TUI siempre omite archivos ocultos y desconocidos.
+
+## Configuración
+
+TidyFiles busca la configuración en este orden:
+
+1. `<carpeta>/tidyfiles.toml`
+2. `<carpeta>/.tidyfiles.toml`
+3. `~/.config/tidyfiles/config.toml`
+4. Reglas predeterminadas en memoria
+
+La configuración local solo afecta a esa carpeta. Si no existe configuración local ni global, la global se crea automáticamente con las reglas predeterminadas.
+
 ```bash
-tidyfiles --init-config
+tidyfiles --config-path   # Ruta y ámbito de la configuración activa
+tidyfiles --init-config   # Crear la configuración global
+tidyfiles --init-local    # Crear una configuración local
+tidyfiles --edit-config   # Editar la configuración activa
 ```
 
-Esto generará el archivo `~/.config/tidyfiles/config.toml` con esta estructura:
+Ejemplo de configuración:
 
 ```toml
 [categories.Imagenes]
-icon = "🖼️"
-extensions = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico", "raw"]
+icon = "IMG"
+extensions = ["jpg", "jpeg", "png", "gif", "webp", "svg"]
 
 [categories.Documentos]
-icon = "📄"
-extensions = ["pdf", "docx", "doc", "txt", "xlsx", "pptx", "csv", "md"]
+icon = "DOC"
+extensions = ["pdf", "docx", "txt", "md", "csv"]
 
-# ¡Puedes agregar tus propias categorías fácilmente!
 [categories.Modelos3D]
-icon = "🧊"
+icon = "3D"
 extensions = ["blend", "fbx", "obj", "stl"]
-
-[categories.Torrents]
-icon = "🧲"
-extensions = ["torrent"]
 ```
 
-> **Nota para proyectos aislados**: Si en alguna carpeta específica necesitas reglas especiales que no afecten al resto del sistema, puedes crear un archivo local `tidyfiles.toml` dentro de esa carpeta. TidyFiles le dará prioridad a ese directorio puntual.
+El campo `icon` acepta cualquier texto. La clave de cada categoría se usa como nombre de la carpeta de destino.
 
----
+## Pruebas
 
-## 🧪 Pruebas Automatizadas
-
-El proyecto incluye tests unitarios e integrados completos:
 ```bash
 cargo test
 ```
+
+Las pruebas de integración cubren clasificación, resolución de colisiones, configuración personalizada y el ciclo completo de organizar y deshacer.
