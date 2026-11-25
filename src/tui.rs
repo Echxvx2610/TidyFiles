@@ -7,7 +7,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, BorderType, Borders, Clear, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
 };
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -19,10 +19,33 @@ enum ActiveView {
     CategoriesHelp,
 }
 
+/// La TUI solo muestra iconos ASCII. Si una configuración antigua trae emojis,
+/// se usa una abreviatura segura basada en el nombre de la categoría.
+fn display_icon(icon: &str, category: &str) -> String {
+    let trimmed = icon.trim();
+    if !trimmed.is_empty() && trimmed.is_ascii() && trimmed.chars().all(|c| c.is_ascii_graphic()) {
+        return trimmed.chars().take(4).collect();
+    }
+
+    let mut fallback: String = category
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .take(3)
+        .collect();
+    fallback.make_ascii_uppercase();
+
+    if fallback.is_empty() {
+        "DIR".to_string()
+    } else {
+        fallback
+    }
+}
+
 pub struct TuiApp {
     target_dir: PathBuf,
     organizer: Organizer,
     config: Config,
+    config_source: Option<PathBuf>,
     items: Vec<PlanItem>,
     selected_indices: HashSet<usize>,
     cursor: usize,
@@ -35,7 +58,9 @@ pub struct TuiApp {
 impl TuiApp {
     pub fn new(target_dir: &Path) -> Result<Self> {
         let abs_target = target_dir.canonicalize()?;
-        let config = Config::load_or_default(Some(&abs_target));
+        let resolution = Config::resolve(Some(&abs_target))?;
+        let config = resolution.config;
+        let config_source = resolution.source_path;
         let organizer = Organizer::with_config(&config);
 
         let options = OrganizerOptions {
@@ -61,6 +86,7 @@ impl TuiApp {
             target_dir: abs_target,
             organizer,
             config,
+            config_source,
             items: plan.items,
             selected_indices,
             cursor: 0,
@@ -195,11 +221,11 @@ impl TuiApp {
             .execute_items(&self.target_dir, &selected_items)
         {
             Ok(_) => {
-                self.status_message = format!("🎉 ¡Éxito! Se movieron {} archivo(s).", total);
+                self.status_message = format!("OK: se movieron {} archivo(s).", total);
                 self.refresh_plan()?;
             }
             Err(e) => {
-                self.status_message = format!("❌ Error: {}", e);
+                self.status_message = format!("Error: {}", e);
             }
         }
 
@@ -210,7 +236,7 @@ impl TuiApp {
         match self.organizer.undo_last(&self.target_dir) {
             Ok(Some(tx)) => {
                 self.status_message = format!(
-                    "🔄 Reversión exitosa: {} archivo(s) restaurados.",
+                    "OK: reversión completada, {} archivo(s) restaurados.",
                     tx.moves.len()
                 );
                 self.refresh_plan()?;
@@ -219,7 +245,7 @@ impl TuiApp {
                 self.status_message = "No hay historial previo para revertir.".to_string();
             }
             Err(e) => {
-                self.status_message = format!("❌ Error al deshacer: {}", e);
+                self.status_message = format!("Error al deshacer: {}", e);
             }
         }
         Ok(())
@@ -265,12 +291,12 @@ impl TuiApp {
     fn render_header(&self, frame: &mut Frame, area: Rect) {
         let title_spans = vec![
             Span::styled(
-                " ⚡ TidyFiles ",
+                " TidyFiles ",
                 Style::default()
                     .fg(Color::Cyan)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw("│ "),
+            Span::raw("| "),
             Span::styled(
                 self.target_dir.display().to_string(),
                 Style::default().fg(Color::Yellow),
@@ -280,7 +306,6 @@ impl TuiApp {
         let header = Paragraph::new(Line::from(title_spans)).block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(Color::Cyan)),
         );
 
@@ -299,13 +324,13 @@ impl TuiApp {
     }
 
     fn render_categories_panel(&self, frame: &mut Frame, area: Rect) {
-        let mut category_counts: std::collections::BTreeMap<&str, (usize, &str)> =
+        let mut category_counts: std::collections::BTreeMap<&str, (usize, String)> =
             std::collections::BTreeMap::new();
 
         for item in &self.items {
             let entry = category_counts
                 .entry(&item.category_name)
-                .or_insert((0, &item.category_icon));
+                .or_insert_with(|| (0, display_icon(&item.category_icon, &item.category_name)));
             entry.0 += 1;
         }
 
@@ -338,9 +363,8 @@ impl TuiApp {
         }
 
         let block = Block::default()
-            .title(" 📊 Resumen por Tipos ")
+            .title(" Resumen por tipo ")
             .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(Color::Blue));
 
         let paragraph = Paragraph::new(lines).block(block);
@@ -350,17 +374,16 @@ impl TuiApp {
     fn render_files_panel(&self, frame: &mut Frame, area: Rect) {
         let block = Block::default()
             .title(format!(
-                " 📁 Archivos detectados ({}/{}) ",
+                " Archivos detectados ({}/{}) ",
                 self.selected_indices.len(),
                 self.items.len()
             ))
             .borders(Borders::ALL)
-            .border_type(BorderType::Rounded)
             .border_style(Style::default().fg(Color::Cyan));
 
         if self.items.is_empty() {
             let empty_text = Paragraph::new(
-                "\n  ✨ No hay archivos para organizar en esta carpeta.\n\n  Presiona [r] para recargar o [u] para deshacer la última operación.",
+                "\n  No hay archivos para organizar en esta carpeta.\n\n  Presiona [r] para recargar o [u] para deshacer la última operación.",
             )
             .block(block);
             frame.render_widget(empty_text, area);
@@ -388,7 +411,7 @@ impl TuiApp {
 
                 let checkbox = if is_selected {
                     Span::styled(
-                        "[✓] ",
+                        "[x] ",
                         Style::default()
                             .fg(Color::Green)
                             .add_modifier(Modifier::BOLD),
@@ -402,11 +425,12 @@ impl TuiApp {
                     .file_name()
                     .unwrap_or_default()
                     .to_string_lossy();
+                let icon = display_icon(&item.category_icon, &item.category_name);
                 let dest_folder = format!("{}/", item.category_name);
 
                 let line_spans = vec![
                     checkbox,
-                    Span::raw(format!("{} ", item.category_icon)),
+                    Span::raw(format!("{} ", icon)),
                     Span::styled(
                         format!("{:<28} ", filename),
                         if is_cursor {
@@ -418,7 +442,7 @@ impl TuiApp {
                             Style::default().fg(Color::White)
                         },
                     ),
-                    Span::styled("➜ ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("-> ", Style::default().fg(Color::DarkGray)),
                     Span::styled(dest_folder, Style::default().fg(Color::Yellow)),
                 ];
 
@@ -447,30 +471,29 @@ impl TuiApp {
 
         // Atajos de teclado
         let shortcuts = Paragraph::new(Line::from(vec![
-            Span::styled(" [↑/↓/j/k] ", Style::default().fg(Color::Cyan)),
-            Span::raw("Navegar │"),
+            Span::styled(" [k/j] ", Style::default().fg(Color::Cyan)),
+            Span::raw("Navegar |"),
             Span::styled(" [Espacio] ", Style::default().fg(Color::Cyan)),
-            Span::raw("Seleccionar │"),
+            Span::raw("Seleccionar |"),
             Span::styled(" [a] ", Style::default().fg(Color::Cyan)),
-            Span::raw("Todos │"),
+            Span::raw("Todos |"),
             Span::styled(
                 " [o/Enter] ",
                 Style::default()
                     .fg(Color::Green)
                     .add_modifier(Modifier::BOLD),
             ),
-            Span::raw("Organizar │"),
+            Span::raw("Organizar |"),
             Span::styled(" [u] ", Style::default().fg(Color::Yellow)),
-            Span::raw("Deshacer │"),
+            Span::raw("Deshacer |"),
             Span::styled(" [c] ", Style::default().fg(Color::Magenta)),
-            Span::raw("Formatos │"),
+            Span::raw("Formatos |"),
             Span::styled(" [q/Esc] ", Style::default().fg(Color::Red)),
             Span::raw("Salir"),
         ]))
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
                 .border_style(Style::default().fg(Color::DarkGray)),
         );
 
@@ -490,9 +513,8 @@ impl TuiApp {
         frame.render_widget(Clear, popup_rect);
 
         let outer_block = Block::default()
-            .title(" ⚙️ Formatos y Categorías Configuradas ")
+            .title(" Formatos y Categorías Configuradas ")
             .borders(Borders::ALL)
-            .border_type(BorderType::Double)
             .border_style(Style::default().fg(Color::Magenta));
 
         let inner_area = outer_block.inner(popup_rect);
@@ -516,7 +538,7 @@ impl TuiApp {
                     .fg(Color::Cyan)
                     .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
             ),
-            Span::styled("│ ", Style::default().fg(Color::DarkGray)),
+            Span::styled("| ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 "Formatos y Extensiones Soportadas",
                 Style::default()
@@ -531,11 +553,12 @@ impl TuiApp {
         frame.render_widget(header_p, modal_chunks[0]);
 
         // Cálculo exacto del ancho de la columna derecha para envolver sin desbordar
-        // Columna izquierda: 18 caracteres. Separador "│ ": 2 caracteres.
+        // Columna izquierda: 18 caracteres. Separador "| ": 2 caracteres.
         let right_col_width = (inner_area.width.saturating_sub(21) as usize).max(20);
 
         let mut lines = Vec::new();
         for (name, cat) in &self.config.categories {
+            let icon = display_icon(&cat.icon, name);
             // Dividir las extensiones en líneas que quepan en right_col_width
             let mut ext_lines: Vec<String> = Vec::new();
             let mut current_line = String::new();
@@ -563,18 +586,18 @@ impl TuiApp {
                 if line_idx == 0 {
                     lines.push(Line::from(vec![
                         Span::styled(
-                            format!(" {} {:<14}", cat.icon, name),
+                            format!(" {} {:<14}", icon, name),
                             Style::default()
                                 .fg(Color::Yellow)
                                 .add_modifier(Modifier::BOLD),
                         ),
-                        Span::styled("│ ", Style::default().fg(Color::DarkGray)),
+                        Span::styled("| ", Style::default().fg(Color::DarkGray)),
                         Span::styled(ext_line, Style::default().fg(Color::White)),
                     ]));
                 } else {
                     lines.push(Line::from(vec![
                         Span::raw("                  "), // 18 espacios exactos: nunca invade la columna de nombre
-                        Span::styled("│ ", Style::default().fg(Color::DarkGray)),
+                        Span::styled("| ", Style::default().fg(Color::DarkGray)),
                         Span::styled(ext_line, Style::default().fg(Color::White)),
                     ]));
                 }
@@ -592,25 +615,28 @@ impl TuiApp {
         let footer_lines = vec![
             Line::from(vec![
                 Span::styled(
-                    "💡 Reglas: ",
+                    "Reglas: ",
                     Style::default()
                         .fg(Color::Green)
                         .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw("edita "),
                 Span::styled(
-                    "~/.config/tidyfiles/config.toml",
+                    self.config_source
+                        .as_ref()
+                        .map(|path| path.display().to_string())
+                        .unwrap_or_else(|| "las reglas de fábrica".to_string()),
                     Style::default()
                         .fg(Color::Cyan)
                         .add_modifier(Modifier::BOLD),
                 ),
-                Span::raw(" (aplica a todo el sistema)."),
+                Span::raw("."),
             ]),
             Line::from(vec![
                 Span::styled("   Atajos: ", Style::default().fg(Color::DarkGray)),
                 Span::styled("[Esc] / [q] / [c] ", Style::default().fg(Color::Red)),
-                Span::raw("Cerrar  │  "),
-                Span::styled("[↑/↓/j/k] ", Style::default().fg(Color::Cyan)),
+                Span::raw("Cerrar  |  "),
+                Span::styled("[k/j] ", Style::default().fg(Color::Cyan)),
                 Span::raw("Desplazar"),
             ]),
         ];
@@ -619,5 +645,78 @@ impl TuiApp {
             .block(footer_block)
             .wrap(Wrap { trim: true });
         frame.render_widget(footer_p, modal_chunks[2]);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{TuiApp, display_icon};
+    use ratatui::{Terminal, backend::TestBackend};
+    use std::fs;
+    use tempfile::tempdir;
+
+    #[test]
+    fn keeps_ascii_icons() {
+        assert_eq!(display_icon("IMG", "Imagenes"), "IMG");
+        assert_eq!(display_icon("CODE", "Codigo"), "CODE");
+    }
+
+    #[test]
+    fn replaces_emoji_icons_with_ascii_fallback() {
+        assert_eq!(display_icon("🎬", "Videos"), "VID");
+        assert_eq!(display_icon("⚙️", "Instaladores"), "INS");
+    }
+
+    #[test]
+    fn replaces_blank_icons_with_category_fallback() {
+        assert_eq!(display_icon(" ", "Video Procesado"), "VID");
+        assert_eq!(display_icon("", "Otros"), "OTR");
+    }
+
+    #[test]
+    fn renders_ascii_only_even_with_emoji_icons() {
+        let temp = tempdir().unwrap();
+        let root = temp.path();
+
+        fs::write(
+            root.join("tidyfiles.toml"),
+            r#"
+[categories."Video Procesado"]
+icon = "🎬"
+extensions = ["mp4"]
+"#,
+        )
+        .unwrap();
+        fs::write(root.join("clip.mp4"), b"x").unwrap();
+
+        let app = TuiApp::new(root).unwrap();
+        let mut terminal = Terminal::new(TestBackend::new(100, 30)).unwrap();
+        terminal.draw(|frame| app.render_ui(frame)).unwrap();
+
+        let content: String = terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect();
+
+        let forbidden: String = content
+            .chars()
+            .filter(|c| {
+                let code = *c as u32;
+                (0x1F000..=0x1FAFF).contains(&code) // emojis
+                    || (0x2600..=0x27BF).contains(&code) // símbolos y dingbats
+                    || (0x2B00..=0x2BFF).contains(&code) // flechas decorativas
+                    || (0x2190..=0x21FF).contains(&code) // flechas
+                    || code == 0xFE0F // selector de variación emoji
+            })
+            .collect();
+        assert!(
+            forbidden.is_empty(),
+            "la TUI emitió emojis o símbolos decorativos: {forbidden:?}"
+        );
+        assert!(content.contains("VID"));
+        assert!(content.contains("Video Procesado"));
     }
 }

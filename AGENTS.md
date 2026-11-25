@@ -35,6 +35,9 @@ Priority: `<target>/tidyfiles.toml` → `<target>/.tidyfiles.toml` → `~/.confi
 - Unknown extensions are skipped unless `--include-unknown`, which sends them to `Otros`.
 - Local configs, history, hidden files, and directories are not sorted. Hidden files require `--hidden`.
 - The TUI hardcodes `include_hidden: false` and `include_unknown: false`; those flags only affect CLI mode.
+- Invalid local/global TOML is fatal and reports file plus line. Do not restore silent fallback behavior; it caused files to be moved with global rules while a local config existed.
+- Category keys with spaces require TOML quoting: `[categories."Video Procesado"]`.
+- TUI icons are ASCII-only. `display_icon` replaces emoji/blank configured icons with an abbreviation derived from the category name.
 
 ## Architecture
 
@@ -52,7 +55,7 @@ Keep planning and execution separate: `generate_plan` must remain side-effect-fr
 
 - Category names are Spanish and become destination folder names (`Imagenes`, `Documentos`, `Codigo`, `Otros`, …). Tests assert these names.
 - User-facing output, docs, and test comments are Spanish; keep new messages consistent.
-- Tests use `tempfile`; there are no unit tests inside `src/`.
+- Tests use `tempfile`; `src/tui.rs` has a small unit-test module for ASCII icon fallbacks.
 - No test/lint CI or formatter config exists; the only workflow is the tag-triggered release. `cargo fmt --check` currently fails, so repo-wide `cargo fmt` creates unrelated diffs. `cargo clippy --all-targets -- -D warnings` also fails on pre-existing lints; do not assume your change caused them.
 - `clap` reads the package version from `Cargo.toml`; release tags must match it exactly (`v0.2.0` for `0.2.0`).
 - `ROADMAP_FASES.md` is gitignored planning material, not a source of truth.

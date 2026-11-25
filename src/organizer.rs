@@ -125,7 +125,7 @@ impl Organizer {
                 Some(cat) => (cat.name.clone(), cat.icon.clone()),
                 None => {
                     if options.include_unknown {
-                        ("Otros".to_string(), "📁".to_string())
+                        ("Otros".to_string(), "OTH".to_string())
                     } else {
                         skipped_unrecognized += 1;
                         continue;

@@ -132,6 +132,16 @@ extensions = ["blend", "fbx", "obj", "stl"]
 
 El campo `icon` acepta cualquier texto. La clave de cada categoría se usa como nombre de la carpeta de destino.
 
+Si el nombre de la categoría contiene espacios, la clave debe ir entre comillas:
+
+```toml
+[categories."Video Procesado"]
+icon = "VID"
+extensions = ["mp4"]
+```
+
+Un archivo de configuración local con errores de sintaxis detiene la ejecución con un mensaje que indica el archivo y la línea; no se usan silenciosamente las reglas globales.
+
 ## Pruebas
 
 ```bash

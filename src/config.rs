@@ -22,7 +22,7 @@ impl Default for Config {
         categories.insert(
             "Imagenes".to_string(),
             CategoryConfig {
-                icon: "🖼️".to_string(),
+                icon: "IMG".to_string(),
                 extensions: vec![
                     "jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico", "tiff", "tif",
                     "heic", "heif", "avif", "raw", "cr2", "nef", "psd", "ai",
@@ -36,7 +36,7 @@ impl Default for Config {
         categories.insert(
             "Documentos".to_string(),
             CategoryConfig {
-                icon: "📄".to_string(),
+                icon: "DOC".to_string(),
                 extensions: vec![
                     "pdf", "docx", "doc", "txt", "rtf", "odt", "epub", "mobi", "md", "pages",
                     "xlsx", "xls", "csv", "tsv", "ods", "pptx", "ppt", "odp",
@@ -50,7 +50,7 @@ impl Default for Config {
         categories.insert(
             "Videos".to_string(),
             CategoryConfig {
-                icon: "🎬".to_string(),
+                icon: "VID".to_string(),
                 extensions: vec![
                     "mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v", "mpg", "mpeg", "3gp",
                 ]
@@ -63,7 +63,7 @@ impl Default for Config {
         categories.insert(
             "Audio".to_string(),
             CategoryConfig {
-                icon: "🎵".to_string(),
+                icon: "AUD".to_string(),
                 extensions: vec![
                     "mp3", "wav", "flac", "aac", "ogg", "m4a", "wma", "opus", "aiff", "mid", "midi",
                 ]
@@ -76,7 +76,7 @@ impl Default for Config {
         categories.insert(
             "Comprimidos".to_string(),
             CategoryConfig {
-                icon: "📦".to_string(),
+                icon: "ZIP".to_string(),
                 extensions: vec![
                     "zip", "tar", "gz", "bz2", "7z", "rar", "xz", "tgz", "tbz2", "zst", "iso",
                 ]
@@ -89,7 +89,7 @@ impl Default for Config {
         categories.insert(
             "Instaladores".to_string(),
             CategoryConfig {
-                icon: "⚙️".to_string(),
+                icon: "APP".to_string(),
                 extensions: vec![
                     "deb",
                     "rpm",
@@ -112,7 +112,7 @@ impl Default for Config {
         categories.insert(
             "Codigo".to_string(),
             CategoryConfig {
-                icon: "💻".to_string(),
+                icon: "CODE".to_string(),
                 extensions: vec![
                     "rs", "py", "js", "ts", "tsx", "jsx", "c", "cpp", "h", "hpp", "cs", "java",
                     "go", "rb", "php", "sh", "bash", "zsh", "html", "css", "scss", "sql", "json",
@@ -127,7 +127,7 @@ impl Default for Config {
         categories.insert(
             "Fuentes".to_string(),
             CategoryConfig {
-                icon: "🔤".to_string(),
+                icon: "FONT".to_string(),
                 extensions: vec!["ttf", "otf", "woff", "woff2", "eot"]
                     .into_iter()
                     .map(String::from)
@@ -139,6 +139,7 @@ impl Default for Config {
     }
 }
 
+#[derive(Debug)]
 pub struct ConfigResolution {
     pub config: Config,
     pub source_path: Option<PathBuf>,
@@ -157,24 +158,35 @@ impl Config {
     }
 
     /// Resuelve y carga la configuración:
-    /// 1. Si existe configuración local específica en target_dir (.tidyfiles.toml u tidyfiles.toml), tiene prioridad para proyectos aislados.
+    /// 1. Si existe configuración local específica en target_dir (tidyfiles.toml o .tidyfiles.toml), tiene prioridad.
     /// 2. Si no, busca la configuración global del usuario (~/.config/tidyfiles/config.toml).
-    ///    Si no existe aún en disco, la crea automáticamente con los valores por defecto.
+    ///    Si no existe aún en disco, intenta crearla automáticamente con los valores por defecto.
     /// 3. Si no es posible escribir ni leer el archivo global, usa los valores por defecto en memoria.
-    pub fn resolve(target_dir: Option<&Path>) -> ConfigResolution {
+    ///
+    /// Un archivo de configuración existente pero inválido es un error: no se cae
+    /// silenciosamente a otra configuración para evitar mover archivos con reglas inesperadas.
+    pub fn resolve(target_dir: Option<&Path>) -> Result<ConfigResolution> {
         // 1. Caso opcional: configuración local de carpeta
         if let Some(target) = target_dir {
             for filename in &["tidyfiles.toml", ".tidyfiles.toml"] {
                 let local_path = target.join(filename);
                 if local_path.exists() {
-                    if let Ok(content) = fs::read_to_string(&local_path) {
-                        if let Ok(config) = toml::from_str::<Config>(&content) {
-                            return ConfigResolution {
-                                config,
-                                source_path: Some(local_path),
-                            };
-                        }
-                    }
+                    let content = fs::read_to_string(&local_path).with_context(|| {
+                        format!(
+                            "No se pudo leer la configuración local {}",
+                            local_path.display()
+                        )
+                    })?;
+                    let config = toml::from_str::<Config>(&content).with_context(|| {
+                        format!(
+                            "Error de sintaxis en la configuración local {}",
+                            local_path.display()
+                        )
+                    })?;
+                    return Ok(ConfigResolution {
+                        config,
+                        source_path: Some(local_path),
+                    });
                 }
             }
         }
@@ -182,34 +194,44 @@ impl Config {
         // 2. Configuración global centralizada (~/.config/tidyfiles/config.toml)
         if let Some(global_path) = Self::global_config_path() {
             if global_path.exists() {
-                if let Ok(content) = fs::read_to_string(&global_path) {
-                    if let Ok(config) = toml::from_str::<Config>(&content) {
-                        return ConfigResolution {
-                            config,
-                            source_path: Some(global_path),
-                        };
-                    }
-                }
-            } else {
-                // Auto-inicializar la configuración global en la primera ejecución
-                let default_config = Self::default();
-                let _ = default_config.save_to_file(&global_path);
-                return ConfigResolution {
+                let content = fs::read_to_string(&global_path).with_context(|| {
+                    format!(
+                        "No se pudo leer la configuración global {}",
+                        global_path.display()
+                    )
+                })?;
+                let config = toml::from_str::<Config>(&content).with_context(|| {
+                    format!(
+                        "Error de sintaxis en la configuración global {}",
+                        global_path.display()
+                    )
+                })?;
+                return Ok(ConfigResolution {
+                    config,
+                    source_path: Some(global_path),
+                });
+            }
+
+            // Auto-inicializar la configuración global en la primera ejecución.
+            // Si no se puede escribir, se usan las reglas de fábrica en memoria.
+            let default_config = Self::default();
+            if default_config.save_to_file(&global_path).is_ok() {
+                return Ok(ConfigResolution {
                     config: default_config,
                     source_path: Some(global_path),
-                };
+                });
             }
         }
 
         // 3. Fallback de fábrica en memoria
-        ConfigResolution {
+        Ok(ConfigResolution {
             config: Self::default(),
             source_path: None,
-        }
+        })
     }
 
-    pub fn load_or_default(target_dir: Option<&Path>) -> Self {
-        Self::resolve(target_dir).config
+    pub fn load_or_default(target_dir: Option<&Path>) -> Result<Self> {
+        Ok(Self::resolve(target_dir)?.config)
     }
 
     pub fn save_to_file(&self, path: &Path) -> Result<()> {

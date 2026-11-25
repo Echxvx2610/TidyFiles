@@ -161,11 +161,16 @@ fn handle_init_local(target_dir: &Path) -> Result<()> {
 }
 
 fn handle_edit_config(target_dir: &Path) -> Result<()> {
-    let resolution = Config::resolve(Some(target_dir));
-    let path_to_edit = match resolution.source_path {
-        Some(p) => p,
+    let local_path = ["tidyfiles.toml", ".tidyfiles.toml"]
+        .iter()
+        .map(|filename| target_dir.join(filename))
+        .find(|path| path.exists());
+
+    let path_to_edit = match local_path {
+        Some(path) => path,
         None => {
-            let global = Config::global_config_path().context("No se pudo obtener la ruta global")?;
+            let global =
+                Config::global_config_path().context("No se pudo obtener la ruta global")?;
             if !global.exists() {
                 Config::default().save_to_file(&global)?;
             }
@@ -215,8 +220,8 @@ fn which_command_exists(cmd: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn handle_show_config_path(target_dir: &Path) {
-    let resolution = Config::resolve(Some(target_dir));
+fn handle_show_config_path(target_dir: &Path) -> Result<()> {
+    let resolution = Config::resolve(Some(target_dir))?;
     println!("\n{}", "⚙️  Configuración activa de TidyFiles:".bold());
     println!("{}", "─".repeat(50).dimmed());
 
@@ -248,6 +253,7 @@ fn handle_show_config_path(target_dir: &Path) {
         }
     }
     println!("{}", "─".repeat(50).dimmed());
+    Ok(())
 }
 
 fn run_cli_mode(args: &Cli, organizer: &Organizer) -> Result<()> {
@@ -397,11 +403,10 @@ fn main() -> Result<()> {
     }
 
     if args.config_path {
-        handle_show_config_path(target);
-        return Ok(());
+        return handle_show_config_path(target);
     }
 
-    let config = Config::load_or_default(Some(target));
+    let config = Config::load_or_default(Some(target))?;
     let organizer = Organizer::with_config(&config);
 
     if args.undo {
