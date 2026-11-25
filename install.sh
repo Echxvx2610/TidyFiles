@@ -75,7 +75,9 @@ else
     [ -n "$TAG" ] || fail "No se encontró una release publicada. Define TIDYFILES_VERSION."
 fi
 
-ASSET="${BIN}-${TAG}-${TARGET}.tar.gz"
+ASSET_BASE="${BIN}-${TAG}-${TARGET}"
+ASSET="${ASSET_BASE}.tar.gz"
+CHECKSUM="${ASSET_BASE}.sha256"
 BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/tidyfiles.XXXXXX")"
 
@@ -87,14 +89,14 @@ trap cleanup 0 1 2 15
 printf 'Descargando %s...\n' "$ASSET"
 curl -fsSL --retry 3 -o "${TMP_DIR}/${ASSET}" "${BASE_URL}/${ASSET}" \
     || fail "No se pudo descargar ${ASSET}."
-curl -fsSL --retry 3 -o "${TMP_DIR}/${ASSET}.sha256" "${BASE_URL}/${ASSET}.sha256" \
+curl -fsSL --retry 3 -o "${TMP_DIR}/${CHECKSUM}" "${BASE_URL}/${CHECKSUM}" \
     || fail "No se pudo descargar la suma SHA256 de ${ASSET}."
 
 if command -v sha256sum >/dev/null 2>&1; then
-    (cd "$TMP_DIR" && sha256sum -c "${ASSET}.sha256") >/dev/null \
+    (cd "$TMP_DIR" && sha256sum -c "${CHECKSUM}") >/dev/null \
         || fail "La verificación SHA256 falló."
 elif command -v shasum >/dev/null 2>&1; then
-    (cd "$TMP_DIR" && shasum -a 256 -c "${ASSET}.sha256") >/dev/null \
+    (cd "$TMP_DIR" && shasum -a 256 -c "${CHECKSUM}") >/dev/null \
         || fail "La verificación SHA256 falló."
 else
     fail "Se requiere 'sha256sum' o 'shasum' para verificar la descarga."

@@ -15,7 +15,7 @@ TidyFiles is a single-crate Rust CLI/TUI that sorts files into category folders 
 ## Release flow
 
 - `.github/workflows/release.yml` runs on `v*.*.*` tags, rejects tags that do not match `Cargo.toml`, and uploads six platform archives plus `.sha256` files to GitHub Releases.
-- `install.sh` installs the latest release on Linux/macOS. It expects assets named `tidyfiles-<tag>-<target>.tar.gz` with a sibling `.sha256`; changing the workflow naming requires updating the script.
+- `install.sh` installs the latest release on Linux/macOS. It expects assets named `tidyfiles-<tag>-<target>.tar.gz` and a checksum named `tidyfiles-<tag>-<target>.sha256` (no `.tar.gz` in the checksum name); changing the workflow naming requires updating the script.
 - The install script defaults to `~/.local/bin`; `TIDYFILES_INSTALL_DIR` and `TIDYFILES_VERSION` override it. Linux x86_64 uses the musl archive.
 
 ## Destructive behavior — verify before running
